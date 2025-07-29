@@ -52,11 +52,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
     @objc func showMenu() {
         let menu = NSMenu()
         
-        let statusTitle = httpServer.isRunning ? "Server running on port \(httpServer.currentPort)" : "Server stopped"
+        let statusTitle = httpServer.isRunning ? "Proxy running on localhost:\(httpServer.currentPort)" : "Proxy stopped"
         menu.addItem(NSMenuItem(title: statusTitle, action: nil, keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         
-        let toggleTitle = httpServer.isRunning ? "Stop Server" : "Start Server"
+        let toggleTitle = httpServer.isRunning ? "Stop Proxy" : "Start Proxy"
         let toggleItem = NSMenuItem(title: toggleTitle, action: #selector(toggleServer), keyEquivalent: "")
         menu.addItem(toggleItem)
         
