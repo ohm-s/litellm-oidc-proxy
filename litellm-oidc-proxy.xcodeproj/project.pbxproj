@@ -1,0 +1,556 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		00846E9E2E39431D009206C8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 00846E872E39431C009206C8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 00846E8E2E39431C009206C8;
+			remoteInfo = "litellm-oidc-proxy";
+		};
+		00846EA82E39431D009206C8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 00846E872E39431C009206C8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 00846E8E2E39431C009206C8;
+			remoteInfo = "litellm-oidc-proxy";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		00846E8F2E39431C009206C8 /* litellm-oidc-proxy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "litellm-oidc-proxy.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		00846E9D2E39431D009206C8 /* litellm-oidc-proxyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "litellm-oidc-proxyTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		00846EA72E39431D009206C8 /* litellm-oidc-proxyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "litellm-oidc-proxyUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		00846E912E39431C009206C8 /* litellm-oidc-proxy */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "litellm-oidc-proxy";
+			sourceTree = "<group>";
+		};
+		00846EA02E39431D009206C8 /* litellm-oidc-proxyTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "litellm-oidc-proxyTests";
+			sourceTree = "<group>";
+		};
+		00846EAA2E39431D009206C8 /* litellm-oidc-proxyUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "litellm-oidc-proxyUITests";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		00846E8C2E39431C009206C8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		00846E9A2E39431D009206C8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		00846EA42E39431D009206C8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		00846E862E39431C009206C8 = {
+			isa = PBXGroup;
+			children = (
+				00846E912E39431C009206C8 /* litellm-oidc-proxy */,
+				00846EA02E39431D009206C8 /* litellm-oidc-proxyTests */,
+				00846EAA2E39431D009206C8 /* litellm-oidc-proxyUITests */,
+				00846E902E39431C009206C8 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		00846E902E39431C009206C8 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				00846E8F2E39431C009206C8 /* litellm-oidc-proxy.app */,
+				00846E9D2E39431D009206C8 /* litellm-oidc-proxyTests.xctest */,
+				00846EA72E39431D009206C8 /* litellm-oidc-proxyUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		00846E8E2E39431C009206C8 /* litellm-oidc-proxy */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 00846EB12E39431D009206C8 /* Build configuration list for PBXNativeTarget "litellm-oidc-proxy" */;
+			buildPhases = (
+				00846E8B2E39431C009206C8 /* Sources */,
+				00846E8C2E39431C009206C8 /* Frameworks */,
+				00846E8D2E39431C009206C8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				00846E912E39431C009206C8 /* litellm-oidc-proxy */,
+			);
+			name = "litellm-oidc-proxy";
+			packageProductDependencies = (
+			);
+			productName = "litellm-oidc-proxy";
+			productReference = 00846E8F2E39431C009206C8 /* litellm-oidc-proxy.app */;
+			productType = "com.apple.product-type.application";
+		};
+		00846E9C2E39431D009206C8 /* litellm-oidc-proxyTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 00846EB42E39431D009206C8 /* Build configuration list for PBXNativeTarget "litellm-oidc-proxyTests" */;
+			buildPhases = (
+				00846E992E39431D009206C8 /* Sources */,
+				00846E9A2E39431D009206C8 /* Frameworks */,
+				00846E9B2E39431D009206C8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				00846E9F2E39431D009206C8 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				00846EA02E39431D009206C8 /* litellm-oidc-proxyTests */,
+			);
+			name = "litellm-oidc-proxyTests";
+			packageProductDependencies = (
+			);
+			productName = "litellm-oidc-proxyTests";
+			productReference = 00846E9D2E39431D009206C8 /* litellm-oidc-proxyTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		00846EA62E39431D009206C8 /* litellm-oidc-proxyUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 00846EB72E39431D009206C8 /* Build configuration list for PBXNativeTarget "litellm-oidc-proxyUITests" */;
+			buildPhases = (
+				00846EA32E39431D009206C8 /* Sources */,
+				00846EA42E39431D009206C8 /* Frameworks */,
+				00846EA52E39431D009206C8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				00846EA92E39431D009206C8 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				00846EAA2E39431D009206C8 /* litellm-oidc-proxyUITests */,
+			);
+			name = "litellm-oidc-proxyUITests";
+			packageProductDependencies = (
+			);
+			productName = "litellm-oidc-proxyUITests";
+			productReference = 00846EA72E39431D009206C8 /* litellm-oidc-proxyUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		00846E872E39431C009206C8 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					00846E8E2E39431C009206C8 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					00846E9C2E39431D009206C8 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 00846E8E2E39431C009206C8;
+					};
+					00846EA62E39431D009206C8 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 00846E8E2E39431C009206C8;
+					};
+				};
+			};
+			buildConfigurationList = 00846E8A2E39431C009206C8 /* Build configuration list for PBXProject "litellm-oidc-proxy" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 00846E862E39431C009206C8;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 00846E902E39431C009206C8 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				00846E8E2E39431C009206C8 /* litellm-oidc-proxy */,
+				00846E9C2E39431D009206C8 /* litellm-oidc-proxyTests */,
+				00846EA62E39431D009206C8 /* litellm-oidc-proxyUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		00846E8D2E39431C009206C8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		00846E9B2E39431D009206C8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		00846EA52E39431D009206C8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		00846E8B2E39431C009206C8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		00846E992E39431D009206C8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		00846EA32E39431D009206C8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		00846E9F2E39431D009206C8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 00846E8E2E39431C009206C8 /* litellm-oidc-proxy */;
+			targetProxy = 00846E9E2E39431D009206C8 /* PBXContainerItemProxy */;
+		};
+		00846EA92E39431D009206C8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 00846E8E2E39431C009206C8 /* litellm-oidc-proxy */;
+			targetProxy = 00846EA82E39431D009206C8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		00846EAF2E39431D009206C8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = MHQ97URT4J;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.4;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		00846EB02E39431D009206C8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = MHQ97URT4J;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.4;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		00846EB22E39431D009206C8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "litellm-oidc-proxy/litellm_oidc_proxy.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MHQ97URT4J;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.306.litellm-oidc-proxy";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		00846EB32E39431D009206C8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "litellm-oidc-proxy/litellm_oidc_proxy.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MHQ97URT4J;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.306.litellm-oidc-proxy";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		00846EB52E39431D009206C8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MHQ97URT4J;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.4;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.306.litellm-oidc-proxyTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/litellm-oidc-proxy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/litellm-oidc-proxy";
+			};
+			name = Debug;
+		};
+		00846EB62E39431D009206C8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MHQ97URT4J;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.4;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.306.litellm-oidc-proxyTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/litellm-oidc-proxy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/litellm-oidc-proxy";
+			};
+			name = Release;
+		};
+		00846EB82E39431D009206C8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MHQ97URT4J;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.306.litellm-oidc-proxyUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = "litellm-oidc-proxy";
+			};
+			name = Debug;
+		};
+		00846EB92E39431D009206C8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MHQ97URT4J;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.306.litellm-oidc-proxyUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = "litellm-oidc-proxy";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		00846E8A2E39431C009206C8 /* Build configuration list for PBXProject "litellm-oidc-proxy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				00846EAF2E39431D009206C8 /* Debug */,
+				00846EB02E39431D009206C8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		00846EB12E39431D009206C8 /* Build configuration list for PBXNativeTarget "litellm-oidc-proxy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				00846EB22E39431D009206C8 /* Debug */,
+				00846EB32E39431D009206C8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		00846EB42E39431D009206C8 /* Build configuration list for PBXNativeTarget "litellm-oidc-proxyTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				00846EB52E39431D009206C8 /* Debug */,
+				00846EB62E39431D009206C8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		00846EB72E39431D009206C8 /* Build configuration list for PBXNativeTarget "litellm-oidc-proxyUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				00846EB82E39431D009206C8 /* Debug */,
+				00846EB92E39431D009206C8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 00846E872E39431C009206C8 /* Project object */;
+}
