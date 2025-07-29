@@ -164,6 +164,27 @@ struct SettingsView: View {
                 .padding(.vertical, 8)
             }
             
+            GroupBox("Proxy Settings") {
+                VStack(spacing: 12) {
+                    HStack {
+                        Toggle("Auto-start proxy server", isOn: $settings.autoStartProxy)
+                            .disabled(!settings.isConfigurationValid || !testSuccessful || !endpointTestSuccessful)
+                        Spacer()
+                    }
+                    
+                    if !settings.isConfigurationValid {
+                        Text("Auto-start requires valid OIDC and LiteLLM configuration")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else if !testSuccessful || !endpointTestSuccessful {
+                        Text("Auto-start requires successful configuration tests")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    }
+                }
+                .padding(.vertical, 8)
+            }
+            
             HStack {
                 Button("Cancel") {
                     dismiss()
@@ -180,7 +201,7 @@ struct SettingsView: View {
             }
         }
         .padding()
-        .frame(width: 500, height: 550)
+        .frame(width: 500, height: 650)
         .onAppear {
             portText = String(settings.port)
         }

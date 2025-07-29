@@ -10,28 +10,53 @@ import SQLite3
 
 class DatabaseManager {
     static let shared = DatabaseManager()
+    static var testInstance: DatabaseManager?
+    
     private var db: OpaquePointer?
     private let dbPath: String
     
-    private init() {
-        // Create database in Application Support directory
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let appDir = appSupport.appendingPathComponent("litellm-oidc-proxy", isDirectory: true)
-        
-        // Create directory if it doesn't exist
-        try? FileManager.default.createDirectory(at: appDir, withIntermediateDirectories: true, attributes: nil)
-        
-        dbPath = appDir.appendingPathComponent("requests.db").path
-        print("DatabaseManager: Database path: \(dbPath)")
+    private init(isTest: Bool = false) {
+        if isTest {
+            // Use temp directory for tests
+            let tempDir = FileManager.default.temporaryDirectory
+            dbPath = tempDir.appendingPathComponent("test_requests_\(UUID().uuidString).db").path
+            print("DatabaseManager: Test database path: \(dbPath)")
+        } else {
+            // Create database in Application Support directory
+            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            let appDir = appSupport.appendingPathComponent("litellm-oidc-proxy", isDirectory: true)
+            
+            // Create directory if it doesn't exist
+            try? FileManager.default.createDirectory(at: appDir, withIntermediateDirectories: true, attributes: nil)
+            
+            dbPath = appDir.appendingPathComponent("requests.db").path
+            print("DatabaseManager: Database path: \(dbPath)")
+        }
         
         openDatabase()
         createTables()
+        
+        // Check how many logs exist before cleanup
+        let countBefore = getLogCount()
+        print("DatabaseManager: Total logs before cleanup: \(countBefore)")
+        
+        cleanupCorruptedLogs()
+        
+        // Check how many logs exist after cleanup
+        let countAfter = getLogCount()
+        print("DatabaseManager: Total logs after cleanup: \(countAfter)")
     }
     
     deinit {
         if db != nil {
             sqlite3_close(db)
         }
+    }
+    
+    static func createTestInstance() -> DatabaseManager {
+        let instance = DatabaseManager(isTest: true)
+        testInstance = instance
+        return instance
     }
     
     private func openDatabase() {
@@ -71,8 +96,14 @@ class DatabaseManager {
     }
     
     func insertLog(_ log: RequestLog) {
+        // Don't insert logs with empty method or path
+        if log.method.isEmpty || log.path.isEmpty {
+            print("DatabaseManager: Skipping insert of log with empty method/path - ID: \(log.id.uuidString)")
+            return
+        }
+        
         let insertSQL = """
-            INSERT INTO request_logs (
+            INSERT OR REPLACE INTO request_logs (
                 id, timestamp, method, path, request_headers, request_body,
                 response_status, response_headers, response_body, duration,
                 token_used, error
@@ -103,7 +134,9 @@ class DatabaseManager {
             sqlite3_bind_text(statement, 12, log.error, -1, nil)
             
             if sqlite3_step(statement) == SQLITE_DONE {
-                print("DatabaseManager: Log inserted successfully")
+                print("DatabaseManager: Log inserted successfully - ID: \(log.id.uuidString)")
+                // Force a checkpoint to ensure data is written to disk
+                sqlite3_exec(db, "PRAGMA wal_checkpoint(TRUNCATE)", nil, nil, nil)
             } else {
                 print("DatabaseManager: Error inserting log: \(String(cString: sqlite3_errmsg(db)))")
             }
@@ -118,6 +151,8 @@ class DatabaseManager {
         let querySQL = "SELECT * FROM request_logs ORDER BY timestamp DESC LIMIT ?"
         var statement: OpaquePointer?
         var logs: [RequestLog] = []
+        
+        print("DatabaseManager: Fetching logs with limit \(limit)")
         
         if sqlite3_prepare_v2(db, querySQL, -1, &statement, nil) == SQLITE_OK {
             sqlite3_bind_int(statement, 1, Int32(limit))
@@ -171,7 +206,12 @@ class DatabaseManager {
                     error: error
                 )
                 
-                logs.append(log)
+                // Skip logs with empty method or path (corrupted entries)
+                if !method.isEmpty && !path.isEmpty {
+                    logs.append(log)
+                } else {
+                    print("DatabaseManager: Skipping corrupted log entry with empty method/path - ID: \(id)")
+                }
             }
         } else {
             print("DatabaseManager: SELECT statement preparation failed: \(String(cString: sqlite3_errmsg(db)))")
@@ -188,6 +228,19 @@ class DatabaseManager {
             print("DatabaseManager: Logs cleared successfully")
         } else {
             print("DatabaseManager: Error clearing logs: \(String(cString: sqlite3_errmsg(db)))")
+        }
+    }
+    
+    func cleanupCorruptedLogs() {
+        let deleteSQL = "DELETE FROM request_logs WHERE method = '' OR path = '' OR method IS NULL OR path IS NULL"
+        
+        if sqlite3_exec(db, deleteSQL, nil, nil, nil) == SQLITE_OK {
+            let changes = sqlite3_changes(db)
+            if changes > 0 {
+                print("DatabaseManager: Cleaned up \(changes) corrupted log entries")
+            }
+        } else {
+            print("DatabaseManager: Error cleaning up corrupted logs: \(String(cString: sqlite3_errmsg(db)))")
         }
     }
     

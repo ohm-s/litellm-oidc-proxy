@@ -32,7 +32,18 @@ class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(litellmEndpoint, forKey: "litellmEndpoint") }
     }
     
+    @Published var autoStartProxy: Bool {
+        didSet { UserDefaults.standard.set(autoStartProxy, forKey: "autoStartProxy") }
+    }
+    
     static let shared = AppSettings()
+    
+    var isConfigurationValid: Bool {
+        return !keycloakURL.isEmpty &&
+               !keycloakClientId.isEmpty &&
+               !keycloakClientSecret.isEmpty &&
+               !litellmEndpoint.isEmpty
+    }
     
     private init() {
         self.port = UserDefaults.standard.object(forKey: "serverPort") as? Int ?? 8080
@@ -40,6 +51,7 @@ class AppSettings: ObservableObject {
         self.keycloakClientId = UserDefaults.standard.string(forKey: "keycloakClientId") ?? ""
         self.keycloakClientSecret = KeychainHelper.load(key: "keycloakClientSecret") ?? ""
         self.litellmEndpoint = UserDefaults.standard.string(forKey: "litellmEndpoint") ?? ""
+        self.autoStartProxy = UserDefaults.standard.bool(forKey: "autoStartProxy")
     }
 }
 

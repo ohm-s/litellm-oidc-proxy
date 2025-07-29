@@ -19,7 +19,11 @@ struct LogViewerView: View {
     }
     
     var filteredLogs: [RequestLog] {
-        let filtered = logger.logs.filter { log in
+        // Always fetch fresh from database
+        let allLogs = DatabaseManager.shared.fetchLogs()
+        print("LogViewerView: Fetched \(allLogs.count) logs directly from database")
+        
+        let filtered = allLogs.filter { log in
             let matchesSearch = searchText.isEmpty || 
                 log.path.localizedCaseInsensitiveContains(searchText) ||
                 log.method.localizedCaseInsensitiveContains(searchText) ||
@@ -31,7 +35,7 @@ struct LogViewerView: View {
             
             return matchesSearch && matchesStatus
         }
-        print("LogViewerView: Filtered logs count: \(filtered.count) from total: \(logger.logs.count)")
+        print("LogViewerView: Filtered logs count: \(filtered.count) from total: \(allLogs.count)")
         if !filtered.isEmpty {
             print("LogViewerView: First log: \(filtered[0].method) \(filtered[0].path)")
         }
@@ -82,11 +86,12 @@ struct LogViewerView: View {
                     
                     Button(action: { 
                         print("LogViewerView: Refreshing logs from database...")
-                        logger.refreshLogs()
-                        refreshTrigger = UUID()
+                        refreshTrigger = UUID() // This will trigger filteredLogs to re-compute
                         
-                        // Show alert with most recent log
-                        if let firstLog = logger.logs.first {
+                        // Show alert with most recent log directly from database
+                        let freshLogs = DatabaseManager.shared.fetchLogs()
+                        print("LogViewerView: Database contains \(freshLogs.count) total logs")
+                        if let firstLog = freshLogs.first {
                             let alert = NSAlert()
                             alert.messageText = "Most Recent Log"
                             alert.informativeText = """
@@ -97,7 +102,7 @@ struct LogViewerView: View {
                             Timestamp: \(firstLog.formattedTimestamp)
                             ID: \(firstLog.id.uuidString)
                             
-                            Total logs in memory: \(logger.logs.count)
+                            Total logs in database: \(freshLogs.count)
                             """
                             alert.alertStyle = .informational
                             alert.addButton(withTitle: "OK")
@@ -105,7 +110,7 @@ struct LogViewerView: View {
                         } else {
                             let alert = NSAlert()
                             alert.messageText = "No Logs"
-                            alert.informativeText = "No logs found in memory. Total count: \(logger.logs.count)"
+                            alert.informativeText = "No logs found in database. Total count: \(freshLogs.count)"
                             alert.alertStyle = .warning
                             alert.addButton(withTitle: "OK")
                             alert.runModal()
@@ -191,9 +196,6 @@ struct LogViewerView: View {
             }
             }
             .frame(minWidth: 900, minHeight: 600)
-            .onAppear {
-                logger.refreshLogs()
-            }
             
             // Status bar at bottom
             Divider()
@@ -220,7 +222,7 @@ struct LogViewerView: View {
                 Spacer()
                 
                 // Total database count
-                Text("Total logs in database: \(logger.logs.count)")
+                Text("Total logs in database: \(DatabaseManager.shared.getLogCount())")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

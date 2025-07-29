@@ -126,6 +126,11 @@ class RequestLogger: ObservableObject {
         tokenUsed: String? = nil,
         error: String? = nil
     ) {
+        // Debug logging
+        if method.isEmpty || path.isEmpty {
+            print("RequestLogger: WARNING - updateResponse called with empty method/path")
+            print("  Method: '\(method)' Path: '\(path)' Status: \(responseStatus)")
+        }
         let duration = Date().timeIntervalSince(startTime)
         
         // Convert response body to string (truncate if too large)
@@ -150,6 +155,15 @@ class RequestLogger: ObservableObject {
             tokenUsed: tokenUsed,
             error: error
         )
+        
+        // Additional debug info
+        if method.isEmpty || path.isEmpty {
+            print("RequestLogger: Creating log with empty method/path:")
+            print("  Caller info - check stack trace")
+            print("  Request headers: \(requestHeaders)")
+            print("  Response status: \(responseStatus)")
+            print("  Error: \(error ?? "none")")
+        }
         
         queue.async(flags: .barrier) {
             // Insert into database

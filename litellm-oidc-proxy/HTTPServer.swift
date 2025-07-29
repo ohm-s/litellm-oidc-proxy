@@ -145,6 +145,18 @@ class HTTPServer: ObservableObject {
         let path = requestLine[1]
         let httpVersion = requestLine[2]
         
+        // Validate method and path
+        guard !method.isEmpty && !path.isEmpty else {
+            print("HTTPServer: Invalid request - empty method or path")
+            let response = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 11\r\nConnection: close\r\n\r\nBad Request"
+            if let data = response.data(using: .utf8) {
+                connection.send(content: data, completion: .contentProcessed { _ in
+                    connection.cancel()
+                })
+            }
+            return
+        }
+        
         // Parse headers for logging
         var requestHeadersDict: [String: String] = [:]
         for i in 1..<lines.count {

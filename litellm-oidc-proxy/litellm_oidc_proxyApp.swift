@@ -36,6 +36,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
         }
         
         NotificationCenter.default.addObserver(self, selector: #selector(settingsChanged), name: .settingsChanged, object: nil)
+        
+        // Check for auto-start
+        let settings = AppSettings.shared
+        if settings.autoStartProxy && settings.isConfigurationValid {
+            // Validate configuration before auto-starting
+            Task {
+                await validateAndAutoStart()
+            }
+        }
     }
     
     func updateStatusIcon() {
@@ -84,7 +93,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
         if settingsWindow == nil {
             let hostingView = NSHostingView(rootView: SettingsView())
             settingsWindow = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 500, height: 550),
+                contentRect: NSRect(x: 0, y: 0, width: 500, height: 650),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false
@@ -125,6 +134,30 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
             settingsWindow = nil
         } else if notification.object as? NSWindow == logViewerWindow {
             logViewerWindow = nil
+        }
+    }
+    
+    private func validateAndAutoStart() async {
+        let settings = AppSettings.shared
+        
+        // Validate OIDC configuration and test LiteLLM endpoint in one go
+        let result = await OIDCClient.testLiteLLMEndpoint(
+            keycloakURL: settings.keycloakURL,
+            clientId: settings.keycloakClientId,
+            clientSecret: settings.keycloakClientSecret,
+            litellmEndpoint: settings.litellmEndpoint
+        )
+        
+        switch result {
+        case .success(_):
+            // Both validations passed, start the server
+            DispatchQueue.main.async { [weak self] in
+                self?.httpServer.start()
+                self?.updateStatusIcon()
+                print("Proxy server auto-started successfully")
+            }
+        case .failure(let error):
+            print("Auto-start failed: \(error.localizedDescription)")
         }
     }
 }
