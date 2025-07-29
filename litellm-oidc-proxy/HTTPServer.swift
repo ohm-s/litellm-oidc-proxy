@@ -11,7 +11,7 @@ import Network
 class HTTPServer: ObservableObject {
     private var listener: NWListener?
     @Published var isRunning = false
-    @Published var currentPort: Int = 8080
+    @Published var currentPort: Int = 9000
     
     // Token cache
     private var cachedToken: String?

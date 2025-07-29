@@ -46,7 +46,7 @@ class AppSettings: ObservableObject {
     }
     
     private init() {
-        self.port = UserDefaults.standard.object(forKey: "serverPort") as? Int ?? 8080
+        self.port = UserDefaults.standard.object(forKey: "serverPort") as? Int ?? 9000
         self.keycloakURL = UserDefaults.standard.string(forKey: "keycloakURL") ?? ""
         self.keycloakClientId = UserDefaults.standard.string(forKey: "keycloakClientId") ?? ""
         self.keycloakClientSecret = KeychainHelper.load(key: "keycloakClientSecret") ?? ""
