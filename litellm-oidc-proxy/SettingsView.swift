@@ -15,6 +15,11 @@ struct SettingsView: View {
     @State private var isTesting = false
     @State private var testResult: String = ""
     @State private var testSuccessful = false
+    @State private var isTestingEndpoint = false
+    @State private var endpointTestResult: String = ""
+    @State private var endpointTestSuccessful = false
+    @State private var showModelsPopover = false
+    @State private var availableModels: [String] = []
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -92,6 +97,73 @@ struct SettingsView: View {
                 .padding(.vertical, 8)
             }
             
+            GroupBox("LiteLLM Configuration") {
+                VStack(spacing: 12) {
+                    HStack {
+                        Text("Endpoint URL:")
+                            .frame(width: 120, alignment: .trailing)
+                        TextField("https://litellm.example.com", text: $settings.litellmEndpoint)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                    }
+                    
+                    HStack {
+                        Spacer()
+                            .frame(width: 120)
+                        
+                        Button(action: testEndpoint) {
+                            HStack {
+                                if isTestingEndpoint {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                        .frame(width: 16, height: 16)
+                                } else {
+                                    Image(systemName: "list.bullet.circle")
+                                }
+                                Text("Test Endpoint")
+                            }
+                        }
+                        .disabled(isTestingEndpoint || settings.litellmEndpoint.isEmpty || settings.keycloakURL.isEmpty || settings.keycloakClientId.isEmpty || settings.keycloakClientSecret.isEmpty)
+                        .popover(isPresented: $showModelsPopover) {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Available Models (\(availableModels.count))")
+                                    .font(.headline)
+                                    .padding(.bottom, 5)
+                                
+                                ScrollView {
+                                    VStack(alignment: .leading, spacing: 5) {
+                                        ForEach(availableModels, id: \.self) { model in
+                                            Text(model)
+                                                .font(.system(.body, design: .monospaced))
+                                                .padding(.horizontal, 10)
+                                                .padding(.vertical, 2)
+                                                .background(Color.gray.opacity(0.1))
+                                                .cornerRadius(4)
+                                        }
+                                    }
+                                }
+                                .frame(maxHeight: 300)
+                            }
+                            .padding()
+                            .frame(width: 400)
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    if !endpointTestResult.isEmpty {
+                        HStack {
+                            Spacer()
+                                .frame(width: 120)
+                            Text(endpointTestResult)
+                                .foregroundColor(endpointTestSuccessful ? .green : .red)
+                                .font(.caption)
+                                .lineLimit(2)
+                        }
+                    }
+                }
+                .padding(.vertical, 8)
+            }
+            
             HStack {
                 Button("Cancel") {
                     dismiss()
@@ -108,7 +180,7 @@ struct SettingsView: View {
             }
         }
         .padding()
-        .frame(width: 500, height: 400)
+        .frame(width: 500, height: 550)
         .onAppear {
             portText = String(settings.port)
         }
@@ -145,6 +217,36 @@ struct SettingsView: View {
         }
     }
     
+    private func testEndpoint() {
+        isTestingEndpoint = true
+        endpointTestResult = ""
+        availableModels = []
+        
+        Task {
+            let result = await OIDCClient.testLiteLLMEndpoint(
+                keycloakURL: settings.keycloakURL,
+                clientId: settings.keycloakClientId,
+                clientSecret: settings.keycloakClientSecret,
+                litellmEndpoint: settings.litellmEndpoint
+            )
+            
+            await MainActor.run {
+                isTestingEndpoint = false
+                
+                switch result {
+                case .success(let models):
+                    availableModels = models
+                    endpointTestResult = "Successfully fetched \(models.count) models"
+                    endpointTestSuccessful = true
+                    showModelsPopover = true
+                case .failure(let error):
+                    endpointTestResult = error.localizedDescription
+                    endpointTestSuccessful = false
+                }
+            }
+        }
+    }
+    
     private func saveSettings() {
         guard let newPort = Int(portText), newPort > 0, newPort <= 65535 else {
             alertMessage = "Port must be between 1 and 65535"
@@ -155,6 +257,14 @@ struct SettingsView: View {
         if !settings.keycloakURL.isEmpty {
             guard settings.keycloakURL.starts(with: "http://") || settings.keycloakURL.starts(with: "https://") else {
                 alertMessage = "Keycloak URL must start with http:// or https://"
+                showAlert = true
+                return
+            }
+        }
+        
+        if !settings.litellmEndpoint.isEmpty {
+            guard settings.litellmEndpoint.starts(with: "http://") || settings.litellmEndpoint.starts(with: "https://") else {
+                alertMessage = "LiteLLM endpoint must start with http:// or https://"
                 showAlert = true
                 return
             }

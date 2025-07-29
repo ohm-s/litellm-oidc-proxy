@@ -28,6 +28,10 @@ class AppSettings: ObservableObject {
         }
     }
     
+    @Published var litellmEndpoint: String {
+        didSet { UserDefaults.standard.set(litellmEndpoint, forKey: "litellmEndpoint") }
+    }
+    
     static let shared = AppSettings()
     
     private init() {
@@ -35,6 +39,7 @@ class AppSettings: ObservableObject {
         self.keycloakURL = UserDefaults.standard.string(forKey: "keycloakURL") ?? ""
         self.keycloakClientId = UserDefaults.standard.string(forKey: "keycloakClientId") ?? ""
         self.keycloakClientSecret = KeychainHelper.load(key: "keycloakClientSecret") ?? ""
+        self.litellmEndpoint = UserDefaults.standard.string(forKey: "litellmEndpoint") ?? ""
     }
 }
 
