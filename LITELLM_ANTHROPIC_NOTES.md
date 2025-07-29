@@ -1,24 +1,31 @@
 # LiteLLM Anthropic Integration Notes
 
-## Problem
-LiteLLM returns 404 for `/v1/messages` endpoint when trying to use Anthropic models.
+## Overview
+LiteLLM supports both OpenAI and Anthropic API formats, providing flexibility for different client implementations.
 
-## Understanding
-LiteLLM acts as a unified interface that translates all requests to OpenAI's format. This means:
+## Supported Endpoints
+LiteLLM supports multiple endpoint formats:
 
-1. **All requests go through `/v1/chat/completions`** - regardless of the underlying model provider
-2. **Model selection determines the provider** - e.g., `claude-3-5-haiku-20241022` tells LiteLLM to use Anthropic
-3. **Request format is OpenAI-style** - LiteLLM handles the translation to Anthropic's format internally
+1. **OpenAI-compatible**: `/v1/chat/completions` - Standard OpenAI format
+2. **Anthropic-compatible**: `/v1/messages` - Native Anthropic format
+3. **Model listing**: `/v1/models` - Lists available models
 
-## Solution
-To use Anthropic models through LiteLLM:
+## Using Anthropic Models
+You can use Anthropic models through either endpoint:
 
-1. Use the OpenAI endpoint: `/v1/chat/completions`
-2. Specify the Anthropic model name: `"model": "claude-3-5-haiku-20241022"`
-3. Use OpenAI-style request format
-4. LiteLLM will handle the translation to Anthropic's API
+### Option 1: OpenAI Format (`/v1/chat/completions`)
+- Use OpenAI-style request format
+- Specify the Anthropic model name: `"model": "claude-3-5-haiku-20241022"`
+- LiteLLM handles the translation internally
 
-## Example Request
+### Option 2: Anthropic Format (`/v1/messages`)
+- Use Anthropic's native message format
+- Specify the Anthropic model name
+- Direct compatibility with Anthropic SDKs
+
+## Example Requests
+
+### OpenAI Format
 ```bash
 curl -X POST http://127.0.0.1:9000/v1/chat/completions \
   -H "Content-Type: application/json" \
@@ -34,16 +41,23 @@ curl -X POST http://127.0.0.1:9000/v1/chat/completions \
   }'
 ```
 
+### Anthropic Format
+```bash
+curl -X POST http://127.0.0.1:9000/v1/messages \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "claude-3-5-haiku-20241022",
+    "messages": [
+      {"role": "user", "content": "Hello"}
+    ],
+    "stream": true,
+    "max_tokens": 512
+  }'
+```
+
 ## Proxy Behavior
 The OIDC proxy correctly:
-- Detects streaming requests for both `/chat/completions` and `/messages`
+- Detects streaming requests for both `/v1/chat/completions` and `/v1/messages`
 - Forwards requests with proper authentication
-- Handles streaming responses
-
-However, since LiteLLM doesn't support `/v1/messages`, those requests will return 404.
-
-## Recommendation
-If you need to support Anthropic's native `/v1/messages` endpoint, you would need to either:
-1. Configure LiteLLM to support it (if possible)
-2. Add endpoint translation in the proxy to convert `/v1/messages` requests to `/v1/chat/completions`
-3. Use a different proxy that supports multiple endpoint formats
+- Handles streaming responses for both endpoint formats
+- Maintains compatibility with both OpenAI and Anthropic client libraries
