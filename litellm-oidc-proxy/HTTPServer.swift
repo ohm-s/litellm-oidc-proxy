@@ -70,24 +70,65 @@ class HTTPServer: ObservableObject {
         var requestData = Data()
         
         func receiveData() {
-            connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, isComplete, error in
+            connection.receive(minimumIncompleteLength: 1, maximumLength: 1048576) { data, _, isComplete, error in
                 if let data = data {
                     requestData.append(data)
                     
                     // Check if we have complete headers
                     if let requestString = String(data: requestData, encoding: .utf8),
-                       requestString.contains("\r\n\r\n") {
+                       let headerEndRange = requestString.range(of: "\r\n\r\n") {
                         
-                        let dataToProcess = requestData
-                        Task {
-                            await self.processRequest(dataToProcess, on: connection)
+                        // Extract headers to check Content-Length
+                        let headersPart = String(requestString[..<headerEndRange.lowerBound])
+                        var contentLength: Int? = nil
+                        
+                        // Parse Content-Length header
+                        let lines = headersPart.components(separatedBy: "\r\n")
+                        for line in lines {
+                            if line.lowercased().starts(with: "content-length:") {
+                                let parts = line.split(separator: ":", maxSplits: 1)
+                                if parts.count == 2 {
+                                    contentLength = Int(parts[1].trimmingCharacters(in: .whitespaces))
+                                }
+                                break
+                            }
                         }
-                        return
+                        
+                        // Calculate how much body we should have
+                        let headerEndIndex = requestString.distance(from: requestString.startIndex, to: headerEndRange.upperBound)
+                        let currentBodyLength = requestData.count - headerEndIndex
+                        
+                        // Check if we have the complete request
+                        if let expectedBodyLength = contentLength {
+                            if currentBodyLength >= expectedBodyLength {
+                                // We have the complete request
+                                let dataToProcess = requestData
+                                Task {
+                                    await self.processRequest(dataToProcess, on: connection)
+                                }
+                                return
+                            }
+                            // else continue receiving more data
+                        } else {
+                            // No Content-Length header, assume complete after headers for GET requests
+                            // or if this is the end of the connection
+                            if isComplete || lines[0].starts(with: "GET") || lines[0].starts(with: "DELETE") {
+                                let dataToProcess = requestData
+                                Task {
+                                    await self.processRequest(dataToProcess, on: connection)
+                                }
+                                return
+                            }
+                        }
                     }
                 }
                 
-                if isComplete {
-                    connection.cancel()
+                if isComplete && requestData.count > 0 {
+                    // Connection closed, process what we have
+                    let dataToProcess = requestData
+                    Task {
+                        await self.processRequest(dataToProcess, on: connection)
+                    }
                 } else if let error = error {
                     print("Connection error: \(error)")
                     connection.cancel()
@@ -259,15 +300,26 @@ class HTTPServer: ObservableObject {
             return
         }
         
-        // Append the request path
-        if !urlComponents.path.hasSuffix("/") && !path.hasPrefix("/") {
+        // Parse path and query separately
+        let pathOnly: String
+        let queryString: String?
+        
+        if let queryIndex = path.firstIndex(of: "?") {
+            pathOnly = String(path[..<queryIndex])
+            queryString = String(path[path.index(after: queryIndex)...])
+        } else {
+            pathOnly = path
+            queryString = nil
+        }
+        
+        // Append the request path (without query)
+        if !urlComponents.path.hasSuffix("/") && !pathOnly.hasPrefix("/") {
             urlComponents.path.append("/")
         }
-        urlComponents.path.append(path)
+        urlComponents.path.append(pathOnly)
         
-        // Parse query string from original path
-        if let queryIndex = path.firstIndex(of: "?") {
-            let queryString = String(path[path.index(after: queryIndex)...])
+        // Set query string if present
+        if let queryString = queryString {
             urlComponents.query = queryString
         }
         
