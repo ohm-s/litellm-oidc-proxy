@@ -12,6 +12,9 @@ struct SettingsView: View {
     @State private var portText: String = ""
     @State private var showAlert = false
     @State private var alertMessage = ""
+    @State private var isTesting = false
+    @State private var testResult: String = ""
+    @State private var testSuccessful = false
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -53,6 +56,38 @@ struct SettingsView: View {
                         SecureField("client-secret", text: $settings.keycloakClientSecret)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                     }
+                    
+                    HStack {
+                        Spacer()
+                            .frame(width: 120)
+                        
+                        Button(action: testConfiguration) {
+                            HStack {
+                                if isTesting {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                        .frame(width: 16, height: 16)
+                                } else {
+                                    Image(systemName: "checkmark.circle")
+                                }
+                                Text("Test Configuration")
+                            }
+                        }
+                        .disabled(isTesting || settings.keycloakURL.isEmpty || settings.keycloakClientId.isEmpty || settings.keycloakClientSecret.isEmpty)
+                        
+                        Spacer()
+                    }
+                    
+                    if !testResult.isEmpty {
+                        HStack {
+                            Spacer()
+                                .frame(width: 120)
+                            Text(testResult)
+                                .foregroundColor(testSuccessful ? .green : .red)
+                                .font(.caption)
+                                .lineLimit(2)
+                        }
+                    }
                 }
                 .padding(.vertical, 8)
             }
@@ -73,7 +108,7 @@ struct SettingsView: View {
             }
         }
         .padding()
-        .frame(width: 500, height: 350)
+        .frame(width: 500, height: 400)
         .onAppear {
             portText = String(settings.port)
         }
@@ -81,6 +116,32 @@ struct SettingsView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(alertMessage)
+        }
+    }
+    
+    private func testConfiguration() {
+        isTesting = true
+        testResult = ""
+        
+        Task {
+            let result = await OIDCClient.validateConfiguration(
+                keycloakURL: settings.keycloakURL,
+                clientId: settings.keycloakClientId,
+                clientSecret: settings.keycloakClientSecret
+            )
+            
+            await MainActor.run {
+                isTesting = false
+                
+                switch result {
+                case .success(let message):
+                    testResult = message
+                    testSuccessful = true
+                case .failure(let error):
+                    testResult = error.localizedDescription
+                    testSuccessful = false
+                }
+            }
         }
     }
     
