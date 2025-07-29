@@ -9,7 +9,10 @@
       "Bash(./test-proxy.sh:*)",
       "Bash(xcodebuild:*)",
       "Bash(osascript:*)",
-      "Bash(true)"
+      "Bash(true)",
+      "mcp__XcodeBuildMCP__build_run_mac_ws",
+      "Bash(ls:*)",
+      "Bash(log show:*)"
     ],
     "deny": []
   }

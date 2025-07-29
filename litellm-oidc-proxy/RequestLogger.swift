@@ -186,7 +186,7 @@ class RequestLogger: ObservableObject {
     func clearLogs() {
         queue.async(flags: .barrier) {
             // Clear database
-            self.database.clearLogs()
+            self.database.deleteAllLogs()
             
             // Clear in-memory cache
             DispatchQueue.main.async {
@@ -202,7 +202,7 @@ class RequestLogger: ObservableObject {
         encoder.dateEncodingStrategy = .iso8601
         
         // Fetch all logs from database for export
-        let allLogs = database.fetchLogs(limit: 10000)
+        let allLogs = database.fetchLogs()
         
         if let data = try? encoder.encode(allLogs),
            let json = String(data: data, encoding: .utf8) {

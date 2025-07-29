@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		0018BD352E39741B008504A9 /* SQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 0018BD342E39741B008504A9 /* SQLite */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		00846E9E2E39431D009206C8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0018BD352E39741B008504A9 /* SQLite in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -111,8 +116,6 @@
 				00846E912E39431C009206C8 /* litellm-oidc-proxy */,
 			);
 			name = "litellm-oidc-proxy";
-			packageProductDependencies = (
-			);
 			productName = "litellm-oidc-proxy";
 			productReference = 00846E8F2E39431C009206C8 /* litellm-oidc-proxy.app */;
 			productType = "com.apple.product-type.application";
@@ -134,8 +137,6 @@
 				00846EA02E39431D009206C8 /* litellm-oidc-proxyTests */,
 			);
 			name = "litellm-oidc-proxyTests";
-			packageProductDependencies = (
-			);
 			productName = "litellm-oidc-proxyTests";
 			productReference = 00846E9D2E39431D009206C8 /* litellm-oidc-proxyTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -157,8 +158,6 @@
 				00846EAA2E39431D009206C8 /* litellm-oidc-proxyUITests */,
 			);
 			name = "litellm-oidc-proxyUITests";
-			packageProductDependencies = (
-			);
 			productName = "litellm-oidc-proxyUITests";
 			productReference = 00846EA72E39431D009206C8 /* litellm-oidc-proxyUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -195,6 +194,9 @@
 			);
 			mainGroup = 00846E862E39431C009206C8;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				0018BD332E39741B008504A9 /* XCRemoteSwiftPackageReference "SQLite" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 00846E902E39431C009206C8 /* Products */;
 			projectDirPath = "";
@@ -551,6 +553,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		0018BD332E39741B008504A9 /* XCRemoteSwiftPackageReference "SQLite" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/stephencelis/SQLite.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.15.4;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0018BD342E39741B008504A9 /* SQLite */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0018BD332E39741B008504A9 /* XCRemoteSwiftPackageReference "SQLite" */;
+			productName = SQLite;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 00846E872E39431C009206C8 /* Project object */;
 }

@@ -6,50 +6,77 @@
 //
 
 import Foundation
-import SQLite3
+import SQLite
 
 class DatabaseManager {
     static let shared = DatabaseManager()
     static var testInstance: DatabaseManager?
     
-    private var db: OpaquePointer?
-    private let dbPath: String
+    private let db: Connection
+    
+    // Table definition
+    private let logs = Table("request_logs")
+    
+    // Column definitions
+    private let id = Expression<String>("id")
+    private let timestamp = Expression<Double>("timestamp")
+    private let method = Expression<String>("method")
+    private let path = Expression<String>("path")
+    private let requestHeaders = Expression<Data?>("request_headers")
+    private let requestBody = Expression<String?>("request_body")
+    private let responseStatus = Expression<Int?>("response_status")
+    private let responseHeaders = Expression<Data?>("response_headers")
+    private let responseBody = Expression<String?>("response_body")
+    private let duration = Expression<Double?>("duration")
+    private let tokenUsed = Expression<String?>("token_used")
+    private let error = Expression<String?>("error")
     
     private init(isTest: Bool = false) {
-        if isTest {
-            // Use temp directory for tests
-            let tempDir = FileManager.default.temporaryDirectory
-            dbPath = tempDir.appendingPathComponent("test_requests_\(UUID().uuidString).db").path
-            print("DatabaseManager: Test database path: \(dbPath)")
-        } else {
-            // Create database in Application Support directory
-            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-            let appDir = appSupport.appendingPathComponent("litellm-oidc-proxy", isDirectory: true)
+        do {
+            let dbPath: String
             
-            // Create directory if it doesn't exist
-            try? FileManager.default.createDirectory(at: appDir, withIntermediateDirectories: true, attributes: nil)
+            if isTest {
+                // Use temp directory for tests
+                let tempDir = FileManager.default.temporaryDirectory
+                dbPath = tempDir.appendingPathComponent("test_requests_\(UUID().uuidString).db").path
+                print("DatabaseManager: Test database path: \(dbPath)")
+            } else {
+                // Create database in Application Support directory
+                let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+                let appDir = appSupport.appendingPathComponent("litellm-oidc-proxy", isDirectory: true)
+                
+                // Create directory if it doesn't exist
+                try FileManager.default.createDirectory(at: appDir, withIntermediateDirectories: true, attributes: nil)
+                
+                dbPath = appDir.appendingPathComponent("requests.db").path
+                print("DatabaseManager: Database path: \(dbPath)")
+            }
             
-            dbPath = appDir.appendingPathComponent("requests.db").path
-            print("DatabaseManager: Database path: \(dbPath)")
-        }
-        
-        openDatabase()
-        createTables()
-        
-        // Check how many logs exist before cleanup
-        let countBefore = getLogCount()
-        print("DatabaseManager: Total logs before cleanup: \(countBefore)")
-        
-        cleanupCorruptedLogs()
-        
-        // Check how many logs exist after cleanup
-        let countAfter = getLogCount()
-        print("DatabaseManager: Total logs after cleanup: \(countAfter)")
-    }
-    
-    deinit {
-        if db != nil {
-            sqlite3_close(db)
+            // Create database connection
+            db = try Connection(dbPath)
+            
+            // Setup database
+            try setupDatabase()
+            
+            // Test if we can read from the database
+            do {
+                let count = getLogCount()
+                print("DatabaseManager: Total logs in database: \(count)")
+                
+                // Try to fetch one log to test compatibility
+                if count > 0 {
+                    _ = try db.prepare(logs.limit(1))
+                    print("DatabaseManager: Database schema is compatible")
+                }
+            } catch {
+                print("DatabaseManager: Database schema incompatible, recreating database: \(error)")
+                // Drop and recreate the table
+                try db.run(logs.drop(ifExists: true))
+                try setupDatabase()
+            }
+            
+        } catch {
+            fatalError("DatabaseManager: Failed to initialize database: \(error)")
         }
     }
     
@@ -59,203 +86,180 @@ class DatabaseManager {
         return instance
     }
     
-    private func openDatabase() {
-        if sqlite3_open(dbPath, &db) != SQLITE_OK {
-            print("DatabaseManager: Unable to open database")
-        } else {
-            print("DatabaseManager: Database opened successfully")
-        }
+    private func setupDatabase() throws {
+        // Create table
+        try db.run(logs.create(ifNotExists: true) { t in
+            t.column(id, primaryKey: true)
+            t.column(timestamp)
+            t.column(method)
+            t.column(path)
+            t.column(requestHeaders)
+            t.column(requestBody)
+            t.column(responseStatus)
+            t.column(responseHeaders)
+            t.column(responseBody)
+            t.column(duration)
+            t.column(tokenUsed)
+            t.column(error)
+        })
+        
+        // Create indices
+        try db.run(logs.createIndex(timestamp, ifNotExists: true))
+        try db.run(logs.createIndex(method, path, ifNotExists: true))
     }
     
-    private func createTables() {
-        let createTableString = """
-            CREATE TABLE IF NOT EXISTS request_logs (
-                id TEXT PRIMARY KEY NOT NULL,
-                timestamp REAL NOT NULL,
-                method TEXT NOT NULL,
-                path TEXT NOT NULL,
-                request_headers TEXT,
-                request_body TEXT,
-                response_status INTEGER NOT NULL,
-                response_headers TEXT,
-                response_body TEXT,
-                duration REAL NOT NULL,
-                token_used TEXT,
-                error TEXT
-            );
-            
-            CREATE INDEX IF NOT EXISTS idx_timestamp ON request_logs (timestamp DESC);
-            CREATE INDEX IF NOT EXISTS idx_status ON request_logs (response_status);
-        """
-        
-        if sqlite3_exec(db, createTableString, nil, nil, nil) != SQLITE_OK {
-            print("DatabaseManager: Error creating table: \(String(cString: sqlite3_errmsg(db)))")
-        } else {
-            print("DatabaseManager: Table created successfully")
-        }
-    }
+    // MARK: - Public Methods
     
     func insertLog(_ log: RequestLog) {
         // Don't insert logs with empty method or path
-        if log.method.isEmpty || log.path.isEmpty {
+        guard !log.method.isEmpty && !log.path.isEmpty else {
             print("DatabaseManager: Skipping insert of log with empty method/path - ID: \(log.id.uuidString)")
             return
         }
         
-        let insertSQL = """
-            INSERT OR REPLACE INTO request_logs (
-                id, timestamp, method, path, request_headers, request_body,
-                response_status, response_headers, response_body, duration,
-                token_used, error
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """
-        
-        var statement: OpaquePointer?
-        
-        if sqlite3_prepare_v2(db, insertSQL, -1, &statement, nil) == SQLITE_OK {
-            // Convert headers dictionaries to JSON strings
-            let requestHeadersJSON = try? JSONSerialization.data(withJSONObject: log.requestHeaders, options: [])
-            let requestHeadersString = requestHeadersJSON.flatMap { String(data: $0, encoding: .utf8) }
+        do {
+            let headerData = try? JSONEncoder().encode(log.requestHeaders)
+            let responseHeaderData = try? JSONEncoder().encode(log.responseHeaders)
             
-            let responseHeadersJSON = try? JSONSerialization.data(withJSONObject: log.responseHeaders, options: [])
-            let responseHeadersString = responseHeadersJSON.flatMap { String(data: $0, encoding: .utf8) }
+            let insert = logs.insert(or: .replace,
+                id <- log.id.uuidString,
+                timestamp <- log.timestamp.timeIntervalSince1970,
+                method <- log.method,
+                path <- log.path,
+                requestHeaders <- headerData,
+                requestBody <- log.requestBody,
+                responseStatus <- log.responseStatus,
+                responseHeaders <- responseHeaderData,
+                responseBody <- log.responseBody,
+                duration <- log.duration,
+                tokenUsed <- log.tokenUsed,
+                error <- log.error
+            )
             
-            sqlite3_bind_text(statement, 1, log.id.uuidString, -1, nil)
-            sqlite3_bind_double(statement, 2, log.timestamp.timeIntervalSince1970)
-            sqlite3_bind_text(statement, 3, log.method, -1, nil)
-            sqlite3_bind_text(statement, 4, log.path, -1, nil)
-            sqlite3_bind_text(statement, 5, requestHeadersString, -1, nil)
-            sqlite3_bind_text(statement, 6, log.requestBody, -1, nil)
-            sqlite3_bind_int(statement, 7, Int32(log.responseStatus))
-            sqlite3_bind_text(statement, 8, responseHeadersString, -1, nil)
-            sqlite3_bind_text(statement, 9, log.responseBody, -1, nil)
-            sqlite3_bind_double(statement, 10, log.duration)
-            sqlite3_bind_text(statement, 11, log.tokenUsed, -1, nil)
-            sqlite3_bind_text(statement, 12, log.error, -1, nil)
-            
-            if sqlite3_step(statement) == SQLITE_DONE {
-                print("DatabaseManager: Log inserted successfully - ID: \(log.id.uuidString)")
-                // Force a checkpoint to ensure data is written to disk
-                sqlite3_exec(db, "PRAGMA wal_checkpoint(TRUNCATE)", nil, nil, nil)
-            } else {
-                print("DatabaseManager: Error inserting log: \(String(cString: sqlite3_errmsg(db)))")
-            }
-        } else {
-            print("DatabaseManager: INSERT statement preparation failed: \(String(cString: sqlite3_errmsg(db)))")
+            try db.run(insert)
+            print("DatabaseManager: Successfully inserted log ID: \(log.id.uuidString)")
+            print("  Method: '\(log.method)' Path: '\(log.path)'")
+        } catch {
+            print("DatabaseManager: Failed to insert log: \(error)")
         }
-        
-        sqlite3_finalize(statement)
     }
     
-    func fetchLogs(limit: Int = 1000) -> [RequestLog] {
-        let querySQL = "SELECT * FROM request_logs ORDER BY timestamp DESC LIMIT ?"
-        var statement: OpaquePointer?
-        var logs: [RequestLog] = []
-        
-        print("DatabaseManager: Fetching logs with limit \(limit)")
-        
-        if sqlite3_prepare_v2(db, querySQL, -1, &statement, nil) == SQLITE_OK {
-            sqlite3_bind_int(statement, 1, Int32(limit))
+    func updateLog(_ log: RequestLog) {
+        do {
+            let responseHeaderData = try? JSONEncoder().encode(log.responseHeaders)
             
-            while sqlite3_step(statement) == SQLITE_ROW {
-                let idString = String(cString: sqlite3_column_text(statement, 0))
-                let id = UUID(uuidString: idString) ?? UUID()
-                let timestamp = Date(timeIntervalSince1970: sqlite3_column_double(statement, 1))
-                let method = sqlite3_column_text(statement, 2).map { String(cString: $0) } ?? ""
-                let path = sqlite3_column_text(statement, 3).map { String(cString: $0) } ?? ""
-                
-                // Parse headers from JSON
-                var requestHeaders: [String: String] = [:]
-                if let headerText = sqlite3_column_text(statement, 4) {
-                    let headerString = String(cString: headerText)
-                    if let data = headerString.data(using: .utf8),
-                       let headers = try? JSONSerialization.jsonObject(with: data) as? [String: String] {
-                        requestHeaders = headers
-                    }
+            let logToUpdate = logs.filter(id == log.id.uuidString)
+            try db.run(logToUpdate.update(
+                responseStatus <- log.responseStatus,
+                responseHeaders <- responseHeaderData,
+                responseBody <- log.responseBody,
+                duration <- log.duration,
+                tokenUsed <- log.tokenUsed,
+                error <- log.error
+            ))
+            print("DatabaseManager: Successfully updated log ID: \(log.id.uuidString)")
+        } catch {
+            print("DatabaseManager: Failed to update log: \(error)")
+        }
+    }
+    
+    func fetchLogs() -> [RequestLog] {
+        do {
+            var fetchedLogs: [RequestLog] = []
+            
+            for row in try db.prepare(logs.order(timestamp.desc)) {
+                do {
+                    let requestHeadersDict = row[requestHeaders].flatMap { data in
+                        try? JSONDecoder().decode([String: String].self, from: data)
+                    } ?? [:]
+                    
+                    let responseHeadersDict = row[responseHeaders].flatMap { data in
+                        try? JSONDecoder().decode([String: String].self, from: data)
+                    } ?? [:]
+                    
+                    let log = RequestLog(
+                        id: UUID(uuidString: row[id]) ?? UUID(),
+                        timestamp: Date(timeIntervalSince1970: row[timestamp]),
+                        method: row[method],
+                        path: row[path],
+                        requestHeaders: requestHeadersDict,
+                        requestBody: row[requestBody],
+                        responseStatus: row[responseStatus] ?? 0,
+                        responseHeaders: responseHeadersDict,
+                        responseBody: row[responseBody],
+                        duration: row[duration] ?? 0,
+                        tokenUsed: row[tokenUsed],
+                        error: row[error]
+                    )
+                    
+                    fetchedLogs.append(log)
+                } catch {
+                    print("DatabaseManager: Failed to parse log row: \(error)")
+                    // Skip this row and continue
                 }
+            }
+            
+            print("DatabaseManager: Fetched \(fetchedLogs.count) logs from database")
+            return fetchedLogs
+        } catch {
+            print("DatabaseManager: Failed to fetch logs: \(error)")
+            return []
+        }
+    }
+    
+    func fetchLog(by logId: UUID) -> RequestLog? {
+        do {
+            let logQuery = logs.filter(id == logId.uuidString)
+            
+            if let row = try db.pluck(logQuery) {
+                let requestHeadersDict = row[requestHeaders].flatMap { data in
+                    try? JSONDecoder().decode([String: String].self, from: data)
+                } ?? [:]
                 
-                let requestBody = sqlite3_column_text(statement, 5).map { String(cString: $0) }
-                let responseStatus = Int(sqlite3_column_int(statement, 6))
-                
-                var responseHeaders: [String: String] = [:]
-                if let headerText = sqlite3_column_text(statement, 7) {
-                    let headerString = String(cString: headerText)
-                    if let data = headerString.data(using: .utf8),
-                       let headers = try? JSONSerialization.jsonObject(with: data) as? [String: String] {
-                        responseHeaders = headers
-                    }
-                }
-                
-                let responseBody = sqlite3_column_text(statement, 8).map { String(cString: $0) }
-                let duration = sqlite3_column_double(statement, 9)
-                let tokenUsed = sqlite3_column_text(statement, 10).map { String(cString: $0) }
-                let error = sqlite3_column_text(statement, 11).map { String(cString: $0) }
+                let responseHeadersDict = row[responseHeaders].flatMap { data in
+                    try? JSONDecoder().decode([String: String].self, from: data)
+                } ?? [:]
                 
                 let log = RequestLog(
-                    id: id,
-                    timestamp: timestamp,
-                    method: method,
-                    path: path,
-                    requestHeaders: requestHeaders,
-                    requestBody: requestBody,
-                    responseStatus: responseStatus,
-                    responseHeaders: responseHeaders,
-                    responseBody: responseBody,
-                    duration: duration,
-                    tokenUsed: tokenUsed,
-                    error: error
+                    id: UUID(uuidString: row[id]) ?? UUID(),
+                    timestamp: Date(timeIntervalSince1970: row[timestamp]),
+                    method: row[method],
+                    path: row[path],
+                    requestHeaders: requestHeadersDict,
+                    requestBody: row[requestBody],
+                    responseStatus: row[responseStatus] ?? 0,
+                    responseHeaders: responseHeadersDict,
+                    responseBody: row[responseBody],
+                    duration: row[duration] ?? 0,
+                    tokenUsed: row[tokenUsed],
+                    error: row[error]
                 )
                 
-                // Skip logs with empty method or path (corrupted entries)
-                if !method.isEmpty && !path.isEmpty {
-                    logs.append(log)
-                } else {
-                    print("DatabaseManager: Skipping corrupted log entry with empty method/path - ID: \(id)")
-                }
+                return log
             }
-        } else {
-            print("DatabaseManager: SELECT statement preparation failed: \(String(cString: sqlite3_errmsg(db)))")
-        }
-        
-        sqlite3_finalize(statement)
-        return logs
-    }
-    
-    func clearLogs() {
-        let deleteSQL = "DELETE FROM request_logs"
-        
-        if sqlite3_exec(db, deleteSQL, nil, nil, nil) == SQLITE_OK {
-            print("DatabaseManager: Logs cleared successfully")
-        } else {
-            print("DatabaseManager: Error clearing logs: \(String(cString: sqlite3_errmsg(db)))")
+            
+            return nil
+        } catch {
+            print("DatabaseManager: Failed to fetch log by ID: \(error)")
+            return nil
         }
     }
     
-    func cleanupCorruptedLogs() {
-        let deleteSQL = "DELETE FROM request_logs WHERE method = '' OR path = '' OR method IS NULL OR path IS NULL"
-        
-        if sqlite3_exec(db, deleteSQL, nil, nil, nil) == SQLITE_OK {
-            let changes = sqlite3_changes(db)
-            if changes > 0 {
-                print("DatabaseManager: Cleaned up \(changes) corrupted log entries")
-            }
-        } else {
-            print("DatabaseManager: Error cleaning up corrupted logs: \(String(cString: sqlite3_errmsg(db)))")
+    func deleteAllLogs() {
+        do {
+            try db.run(logs.delete())
+            print("DatabaseManager: Deleted all logs")
+        } catch {
+            print("DatabaseManager: Failed to delete all logs: \(error)")
         }
     }
     
     func getLogCount() -> Int {
-        let querySQL = "SELECT COUNT(*) FROM request_logs"
-        var statement: OpaquePointer?
-        var count = 0
-        
-        if sqlite3_prepare_v2(db, querySQL, -1, &statement, nil) == SQLITE_OK {
-            if sqlite3_step(statement) == SQLITE_ROW {
-                count = Int(sqlite3_column_int(statement, 0))
-            }
+        do {
+            return try db.scalar(logs.count)
+        } catch {
+            print("DatabaseManager: Failed to get log count: \(error)")
+            return 0
         }
-        
-        sqlite3_finalize(statement)
-        return count
     }
 }
