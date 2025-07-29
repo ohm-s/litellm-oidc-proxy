@@ -322,8 +322,19 @@ class HTTPServer: ObservableObject {
         }
         
         // Handle streaming responses
-        if path.contains("/chat/completions") && method == "POST" {
-            await handleStreamingRequest(request, on: connection, startTime: startTime, method: method, path: path, requestHeaders: requestHeadersDict, requestBody: requestBodyString, token: token)
+        if method == "POST" && (path.contains("/chat/completions") || path.contains("/messages")) {
+            // Check if request wants streaming
+            var isStreaming = false
+            if let bodyData = request.httpBody,
+               let bodyJSON = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] {
+                isStreaming = bodyJSON["stream"] as? Bool ?? false
+            }
+            
+            if isStreaming {
+                await handleStreamingRequest(request, on: connection, startTime: startTime, method: method, path: path, requestHeaders: requestHeadersDict, requestBody: requestBodyString, token: token)
+            } else {
+                await handleRegularRequest(request, on: connection, startTime: startTime, method: method, path: path, requestHeaders: requestHeadersDict, requestBody: requestBodyString, token: token)
+            }
         } else {
             await handleRegularRequest(request, on: connection, startTime: startTime, method: method, path: path, requestHeaders: requestHeadersDict, requestBody: requestBodyString, token: token)
         }

@@ -12,7 +12,9 @@
       "Bash(true)",
       "mcp__XcodeBuildMCP__build_run_mac_ws",
       "Bash(ls:*)",
-      "Bash(log show:*)"
+      "Bash(log show:*)",
+      "mcp__XcodeBuildMCP__build_mac_ws",
+      "mcp__XcodeBuildMCP__discover_projs"
     ],
     "deny": []
   }
