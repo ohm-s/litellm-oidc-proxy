@@ -49,8 +49,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
     
     func updateStatusIcon() {
         if let button = statusItem.button {
-            let imageName = httpServer.isRunning ? "network" : "network.slash"
-            button.image = NSImage(systemSymbolName: imageName, accessibilityDescription: "LiteLLM OIDC Proxy")
+            if let image = NSImage(named: "HoliduMenubar") {
+                button.image = image
+                // Don't use template mode to preserve the blue color
+                button.image?.isTemplate = false
+                
+                // Add a visual indicator when server is not running
+                if !httpServer.isRunning {
+                    button.alphaValue = 0.5
+                } else {
+                    button.alphaValue = 1.0
+                }
+            }
+            button.toolTip = httpServer.isRunning ? "LiteLLM OIDC Proxy - Running" : "LiteLLM OIDC Proxy - Stopped"
         }
     }
     

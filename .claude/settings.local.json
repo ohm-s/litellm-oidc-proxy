@@ -14,7 +14,8 @@
       "Bash(ls:*)",
       "Bash(log show:*)",
       "mcp__XcodeBuildMCP__build_mac_ws",
-      "mcp__XcodeBuildMCP__discover_projs"
+      "mcp__XcodeBuildMCP__discover_projs",
+      "Bash(rsvg-convert:*)"
     ],
     "deny": []
   }

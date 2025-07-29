@@ -1,33 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle for visibility -->
+  <circle cx="256" cy="256" r="240" fill="white"/>
+  
   <!-- Holidu House Icon -->
   <g transform="translate(256, 256)">
-    <!-- House shape with hexagonal border -->
+    <!-- House shape with filled background -->
     <path d="M -80 -90 L 0 -130 L 80 -90 L 80 -20 L 80 90 L 0 130 L -80 90 L -80 -20 Z" 
-          fill="none" 
-          stroke="#2B7A9B" 
-          stroke-width="12" 
-          stroke-linejoin="round"/>
+          fill="#2B7A9B" 
+          stroke="none"/>
     
-    <!-- H letter inside -->
-    <g fill="#2B7A9B">
+    <!-- H letter inside (white) -->
+    <g fill="white">
       <!-- Left vertical bar of H -->
-      <rect x="-50" y="-40" width="16" height="80" rx="2"/>
+      <rect x="-50" y="-40" width="20" height="80" rx="2"/>
       
       <!-- Right vertical bar of H -->
-      <rect x="34" y="-40" width="16" height="80" rx="2"/>
+      <rect x="30" y="-40" width="20" height="80" rx="2"/>
       
       <!-- Horizontal bar of H -->
-      <rect x="-50" y="-8" width="100" height="16" rx="2"/>
+      <rect x="-50" y="-10" width="100" height="20" rx="2"/>
       
       <!-- Holidu dot -->
-      <circle cx="0" cy="-60" r="10"/>
+      <circle cx="0" cy="-60" r="12" fill="white"/>
     </g>
   </g>
-  
-  <!-- HOLIDU text (optional - comment out if you only want the icon) -->
-  <!--
-  <text x="256" y="380" font-family="Arial, sans-serif" font-size="60" font-weight="bold" 
-        text-anchor="middle" fill="#2B7A9B">HOLIDU</text>
-  -->
 </svg>
