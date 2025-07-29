@@ -23,6 +23,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
     var statusItem: NSStatusItem!
     var httpServer: HTTPServer!
     var settingsWindow: NSWindow?
+    var logViewerWindow: NSWindow?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -60,6 +61,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
         let toggleItem = NSMenuItem(title: toggleTitle, action: #selector(toggleServer), keyEquivalent: "")
         menu.addItem(toggleItem)
         
+        menu.addItem(NSMenuItem(title: "View Logs...", action: #selector(openLogViewer), keyEquivalent: "l"))
         menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
@@ -98,9 +100,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
         NSApp.activate(ignoringOtherApps: true)
     }
     
+    @objc func openLogViewer() {
+        if logViewerWindow == nil {
+            let hostingView = NSHostingView(rootView: LogViewerView())
+            logViewerWindow = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 1000, height: 700),
+                styleMask: [.titled, .closable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            logViewerWindow?.title = "Request Logs"
+            logViewerWindow?.center()
+            logViewerWindow?.contentView = hostingView
+            logViewerWindow?.isReleasedWhenClosed = false
+            logViewerWindow?.delegate = self
+        }
+        
+        logViewerWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+    
     func windowWillClose(_ notification: Notification) {
         if notification.object as? NSWindow == settingsWindow {
             settingsWindow = nil
+        } else if notification.object as? NSWindow == logViewerWindow {
+            logViewerWindow = nil
         }
     }
 }

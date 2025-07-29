@@ -102,36 +102,84 @@ class HTTPServer: ObservableObject {
     }
     
     private func processRequest(_ requestData: Data, on connection: NWConnection) async {
-        guard let requestString = String(data: requestData, encoding: .utf8) else {
-            await sendErrorResponse(500, "Invalid request", on: connection)
-            return
-        }
+        let startTime = Date()
+        print("HTTPServer: Processing request")
         
-        // Validate configuration
-        guard !settings.litellmEndpoint.isEmpty,
-              !settings.keycloakURL.isEmpty,
-              !settings.keycloakClientId.isEmpty,
-              !settings.keycloakClientSecret.isEmpty else {
-            await sendErrorResponse(503, "Proxy not configured. Please configure LiteLLM and OIDC settings.", on: connection)
+        guard let requestString = String(data: requestData, encoding: .utf8) else {
+            // Simple error response without logging for malformed requests
+            let response = "HTTP/1.1 500 Internal Server Error\r\nContent-Type: text/plain\r\nContent-Length: 15\r\nConnection: close\r\n\r\nInvalid request"
+            if let data = response.data(using: .utf8) {
+                connection.send(content: data, completion: .contentProcessed { _ in
+                    connection.cancel()
+                })
+            }
             return
         }
         
         // Parse HTTP request
         let lines = requestString.components(separatedBy: "\r\n")
         guard lines.count > 0 else {
-            await sendErrorResponse(400, "Bad Request", on: connection)
+            // Simple error response without logging for malformed requests
+            let response = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 11\r\nConnection: close\r\n\r\nBad Request"
+            if let data = response.data(using: .utf8) {
+                connection.send(content: data, completion: .contentProcessed { _ in
+                    connection.cancel()
+                })
+            }
             return
         }
         
         let requestLine = lines[0].components(separatedBy: " ")
         guard requestLine.count >= 3 else {
-            await sendErrorResponse(400, "Bad Request", on: connection)
+            // Simple error response without logging for malformed requests
+            let response = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 11\r\nConnection: close\r\n\r\nBad Request"
+            if let data = response.data(using: .utf8) {
+                connection.send(content: data, completion: .contentProcessed { _ in
+                    connection.cancel()
+                })
+            }
             return
         }
         
         let method = requestLine[0]
         let path = requestLine[1]
         let httpVersion = requestLine[2]
+        
+        // Parse headers for logging
+        var requestHeadersDict: [String: String] = [:]
+        for i in 1..<lines.count {
+            let header = lines[i]
+            if header.isEmpty {
+                break // End of headers
+            }
+            
+            if let colonIndex = header.firstIndex(of: ":") {
+                let key = String(header[..<colonIndex]).trimmingCharacters(in: .whitespaces)
+                let value = String(header[header.index(after: colonIndex)...]).trimmingCharacters(in: .whitespaces)
+                requestHeadersDict[key] = value
+            }
+        }
+        
+        // Extract body if present
+        var bodyData: Data?
+        if let headerEndIndex = requestData.firstRange(of: Data("\r\n\r\n".utf8))?.upperBound {
+            let body = requestData[headerEndIndex...]
+            if !body.isEmpty {
+                bodyData = body
+            }
+        }
+        
+        // Don't log the request here - we'll log the complete request/response together
+        print("HTTPServer: Request - \(method) \(path)")
+        
+        // Validate configuration
+        guard !settings.litellmEndpoint.isEmpty,
+              !settings.keycloakURL.isEmpty,
+              !settings.keycloakClientId.isEmpty,
+              !settings.keycloakClientSecret.isEmpty else {
+            await sendErrorResponse(503, "Proxy not configured. Please configure LiteLLM and OIDC settings.", on: connection, startTime: startTime, method: method, path: path, requestHeaders: requestHeadersDict, requestBody: bodyData)
+            return
+        }
         
         // Get OIDC token
         do {
@@ -144,12 +192,15 @@ class HTTPServer: ObservableObject {
                 httpVersion: httpVersion,
                 headers: lines,
                 requestData: requestData,
+                requestHeadersDict: requestHeadersDict,
+                requestBodyData: bodyData,
                 token: token,
-                on: connection
+                on: connection,
+                startTime: startTime
             )
         } catch {
             print("Failed to get OIDC token: \(error)")
-            await sendErrorResponse(502, "Failed to authenticate with OIDC provider", on: connection)
+            await sendErrorResponse(502, "Failed to authenticate with OIDC provider", on: connection, startTime: startTime, method: method, path: path, requestHeaders: requestHeadersDict, requestBody: bodyData, error: error.localizedDescription)
         }
     }
     
@@ -184,12 +235,15 @@ class HTTPServer: ObservableObject {
         httpVersion: String,
         headers: [String],
         requestData: Data,
+        requestHeadersDict: [String: String],
+        requestBodyData: Data?,
         token: String,
-        on connection: NWConnection
+        on connection: NWConnection,
+        startTime: Date
     ) async {
         // Build target URL
         guard var urlComponents = URLComponents(string: settings.litellmEndpoint) else {
-            await sendErrorResponse(502, "Invalid LiteLLM endpoint", on: connection)
+            await sendErrorResponse(502, "Invalid LiteLLM endpoint", on: connection, startTime: startTime, method: method, path: path, requestHeaders: requestHeadersDict, requestBody: requestBodyData)
             return
         }
         
@@ -206,7 +260,7 @@ class HTTPServer: ObservableObject {
         }
         
         guard let targetURL = urlComponents.url else {
-            await sendErrorResponse(502, "Invalid target URL", on: connection)
+            await sendErrorResponse(502, "Invalid target URL", on: connection, startTime: startTime, method: method, path: path, requestHeaders: requestHeadersDict, requestBody: requestBodyData)
             return
         }
         
@@ -219,33 +273,23 @@ class HTTPServer: ObservableObject {
         var contentLength: Int?
         var isChunked = false
         
-        for i in 1..<headers.count {
-            let header = headers[i]
-            if header.isEmpty {
-                break // End of headers
+        for (key, value) in requestHeadersDict {
+            // Skip certain headers
+            if key.lowercased() == "host" || 
+               key.lowercased() == "authorization" ||
+               key.lowercased() == "connection" {
+                continue
             }
             
-            if let colonIndex = header.firstIndex(of: ":") {
-                let key = String(header[..<colonIndex]).trimmingCharacters(in: .whitespaces)
-                let value = String(header[header.index(after: colonIndex)...]).trimmingCharacters(in: .whitespaces)
-                
-                // Skip certain headers
-                if key.lowercased() == "host" || 
-                   key.lowercased() == "authorization" ||
-                   key.lowercased() == "connection" {
-                    continue
-                }
-                
-                if key.lowercased() == "content-length" {
-                    contentLength = Int(value)
-                }
-                
-                if key.lowercased() == "transfer-encoding" && value.lowercased().contains("chunked") {
-                    isChunked = true
-                }
-                
-                request.setValue(value, forHTTPHeaderField: key)
+            if key.lowercased() == "content-length" {
+                contentLength = Int(value)
             }
+            
+            if key.lowercased() == "transfer-encoding" && value.lowercased().contains("chunked") {
+                isChunked = true
+            }
+            
+            request.setValue(value, forHTTPHeaderField: key)
         }
         
         // Extract body if present
@@ -256,218 +300,20 @@ class HTTPServer: ObservableObject {
             }
         }
         
+        // Convert body to string for logging
+        let requestBodyString = request.httpBody.flatMap { data in
+            if data.count > 10000 {
+                return String(data: data.prefix(10000), encoding: .utf8).map { $0 + "\n... (truncated)" }
+            } else {
+                return String(data: data, encoding: .utf8)
+            }
+        }
+        
         // Handle streaming responses
         if path.contains("/chat/completions") && method == "POST" {
-            await handleStreamingRequest(request, on: connection)
+            await handleStreamingRequest(request, on: connection, startTime: startTime, method: method, path: path, requestHeaders: requestHeadersDict, requestBody: requestBodyString, token: token)
         } else {
-            await handleRegularRequest(request, on: connection)
-        }
-    }
-    
-    private func handleRegularRequest(_ request: URLRequest, on connection: NWConnection) async {
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                await sendErrorResponse(502, "Invalid response from upstream", on: connection)
-                return
-            }
-            
-            // Build response
-            var responseString = "HTTP/1.1 \(httpResponse.statusCode) \(HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode))\r\n"
-            
-            // Copy response headers
-            for (key, value) in httpResponse.allHeaderFields {
-                if let keyString = key as? String,
-                   let valueString = value as? String {
-                    responseString += "\(keyString): \(valueString)\r\n"
-                }
-            }
-            
-            responseString += "\r\n"
-            
-            // Send headers and body
-            if var responseData = responseString.data(using: .utf8) {
-                responseData.append(data)
-                connection.send(content: responseData, completion: .contentProcessed { error in
-                    if let error = error {
-                        print("Send error: \(error)")
-                    }
-                    connection.cancel()
-                })
-            }
-        } catch {
-            print("Request failed: \(error)")
-            await sendErrorResponse(502, "Request to upstream failed", on: connection)
-        }
-    }
-    
-    private func handleStreamingRequest(_ request: URLRequest, on connection: NWConnection) async {
-        let session = URLSession(configuration: .default)
-        
-        let task = session.dataTask(with: request)
-        let delegate = StreamingDelegate(connection: connection)
-        task.delegate = delegate
-        task.resume()
-        
-        // Wait for completion
-        await delegate.waitForCompletion()
-    }
-    
-    private func sendErrorResponse(_ code: Int, _ message: String, on connection: NWConnection) async {
-        let response = """
-        HTTP/1.1 \(code) \(HTTPURLResponse.localizedString(forStatusCode: code))\r
-        Content-Type: text/plain\r
-        Content-Length: \(message.count)\r
-        Connection: close\r
-        \r
-        \(message)
-        """
-        
-        if let data = response.data(using: .utf8) {
-            connection.send(content: data, completion: .contentProcessed { error in
-                if let error = error {
-                    print("Send error: \(error)")
-                }
-                connection.cancel()
-            })
-        }
-    }
-}
-
-// Helper class for streaming responses
-class StreamingDelegate: NSObject, URLSessionDataDelegate {
-    private let connection: NWConnection
-    private var headersSent = false
-    private let semaphore = DispatchSemaphore(value: 0)
-    
-    init(connection: NWConnection) {
-        self.connection = connection
-    }
-    
-    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
-        guard let httpResponse = response as? HTTPURLResponse else {
-            completionHandler(.cancel)
-            return
-        }
-        
-        // Send headers
-        var responseString = "HTTP/1.1 \(httpResponse.statusCode) \(HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode))\r\n"
-        
-        for (key, value) in httpResponse.allHeaderFields {
-            if let keyString = key as? String,
-               let valueString = value as? String {
-                responseString += "\(keyString): \(valueString)\r\n"
-            }
-        }
-        
-        responseString += "\r\n"
-        
-        if let data = responseString.data(using: .utf8) {
-            connection.send(content: data, completion: .contentProcessed { error in
-                if let error = error {
-                    print("Send headers error: \(error)")
-                }
-            })
-        }
-        
-        headersSent = true
-        completionHandler(.allow)
-    }
-    
-    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-        // Stream data chunks
-        connection.send(content: data, completion: .contentProcessed { error in
-            if let error = error {
-                print("Send data error: \(error)")
-            }
-        })
-    }
-    
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        if let error = error {
-            print("Stream error: \(error)")
-        }
-        connection.cancel()
-        semaphore.signal()
-    }
-    
-    func waitForCompletion() async {
-        await withCheckedContinuation { continuation in
-            DispatchQueue.global().async {
-                self.semaphore.wait()
-                continuation.resume()
-            }
-        }
-    }
-}
-
-// Extension to OIDCClient for token with expiry
-extension OIDCClient {
-    struct TokenInfo {
-        let token: String
-        let expiryDate: Date
-    }
-    
-    static func getAccessTokenWithExpiry(keycloakURL: String, clientId: String, clientSecret: String) async -> Result<TokenInfo, OIDCError> {
-        // Build token endpoint URL
-        guard var urlComponents = URLComponents(string: keycloakURL) else {
-            return .failure(.invalidURL)
-        }
-        
-        // Ensure URL ends with /protocol/openid-connect/token
-        let path = urlComponents.path
-        if !path.contains("/protocol/openid-connect/token") {
-            if path.hasSuffix("/") {
-                urlComponents.path = path + "protocol/openid-connect/token"
-            } else {
-                urlComponents.path = path + "/protocol/openid-connect/token"
-            }
-        }
-        
-        guard let url = urlComponents.url else {
-            return .failure(.invalidURL)
-        }
-        
-        // Prepare request
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        
-        // Prepare body
-        let bodyString = "grant_type=client_credentials&client_id=\(clientId)&client_secret=\(clientSecret)"
-        request.httpBody = bodyString.data(using: .utf8)
-        
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                return .failure(.unknownError)
-            }
-            
-            if httpResponse.statusCode == 200 {
-                // Success - try to decode token
-                let decoder = JSONDecoder()
-                if let tokenResponse = try? decoder.decode(TokenResponse.self, from: data) {
-                    let expiresIn = tokenResponse.expires_in ?? 3600 // Default to 1 hour
-                    let expiryDate = Date().addingTimeInterval(TimeInterval(expiresIn))
-                    return .success(TokenInfo(token: tokenResponse.access_token, expiryDate: expiryDate))
-                } else {
-                    return .failure(.decodingError)
-                }
-            } else {
-                // Error - try to decode error response
-                let decoder = JSONDecoder()
-                if let errorResponse = try? decoder.decode(ErrorResponse.self, from: data) {
-                    return .failure(.serverError(errorResponse.error_description ?? errorResponse.error))
-                } else if let errorString = String(data: data, encoding: .utf8) {
-                    return .failure(.serverError("HTTP \(httpResponse.statusCode): \(errorString)"))
-                } else {
-                    return .failure(.serverError("HTTP \(httpResponse.statusCode)"))
-                }
-            }
-        } catch {
-            return .failure(.networkError(error.localizedDescription))
+            await handleRegularRequest(request, on: connection, startTime: startTime, method: method, path: path, requestHeaders: requestHeadersDict, requestBody: requestBodyString, token: token)
         }
     }
 }

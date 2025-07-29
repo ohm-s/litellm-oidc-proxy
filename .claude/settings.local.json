@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__XcodeBuildMCP__list_schems_proj",
+      "mcp__XcodeBuildMCP__build_mac_proj",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(chmod:*)",
+      "Bash(./test-proxy.sh:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(osascript:*)",
+      "Bash(true)"
+    ],
+    "deny": []
+  }
+}

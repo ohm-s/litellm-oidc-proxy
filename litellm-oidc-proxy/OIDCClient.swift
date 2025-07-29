@@ -261,4 +261,71 @@ class OIDCClient {
             return .failure(.networkError(error.localizedDescription))
         }
     }
+    
+    struct TokenInfo {
+        let token: String
+        let expiryDate: Date
+    }
+    
+    static func getAccessTokenWithExpiry(keycloakURL: String, clientId: String, clientSecret: String) async -> Result<TokenInfo, OIDCError> {
+        // Build token endpoint URL
+        guard var urlComponents = URLComponents(string: keycloakURL) else {
+            return .failure(.invalidURL)
+        }
+        
+        // Ensure URL ends with /protocol/openid-connect/token
+        let path = urlComponents.path
+        if !path.contains("/protocol/openid-connect/token") {
+            if path.hasSuffix("/") {
+                urlComponents.path = path + "protocol/openid-connect/token"
+            } else {
+                urlComponents.path = path + "/protocol/openid-connect/token"
+            }
+        }
+        
+        guard let url = urlComponents.url else {
+            return .failure(.invalidURL)
+        }
+        
+        // Prepare request
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        
+        // Prepare body
+        let bodyString = "grant_type=client_credentials&client_id=\(clientId)&client_secret=\(clientSecret)"
+        request.httpBody = bodyString.data(using: .utf8)
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                return .failure(.unknownError)
+            }
+            
+            if httpResponse.statusCode == 200 {
+                // Success - try to decode token
+                let decoder = JSONDecoder()
+                if let tokenResponse = try? decoder.decode(TokenResponse.self, from: data) {
+                    let expiresIn = tokenResponse.expires_in ?? 3600 // Default to 1 hour
+                    let expiryDate = Date().addingTimeInterval(TimeInterval(expiresIn))
+                    return .success(TokenInfo(token: tokenResponse.access_token, expiryDate: expiryDate))
+                } else {
+                    return .failure(.decodingError)
+                }
+            } else {
+                // Error - try to decode error response
+                let decoder = JSONDecoder()
+                if let errorResponse = try? decoder.decode(ErrorResponse.self, from: data) {
+                    return .failure(.serverError(errorResponse.error_description ?? errorResponse.error))
+                } else if let errorString = String(data: data, encoding: .utf8) {
+                    return .failure(.serverError("HTTP \(httpResponse.statusCode): \(errorString)"))
+                } else {
+                    return .failure(.serverError("HTTP \(httpResponse.statusCode)"))
+                }
+            }
+        } catch {
+            return .failure(.networkError(error.localizedDescription))
+        }
+    }
 }
