@@ -15,7 +15,11 @@
       "Bash(log show:*)",
       "mcp__XcodeBuildMCP__build_mac_ws",
       "mcp__XcodeBuildMCP__discover_projs",
-      "Bash(rsvg-convert:*)"
+      "Bash(rsvg-convert:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git rm:*)",
+      "Bash(git filter-branch:*)",
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch --force --index-filter 'git rm -r --cached --ignore-unmatch build/' --prune-empty --tag-name-filter cat -- --all)"
     ],
     "deny": []
   }

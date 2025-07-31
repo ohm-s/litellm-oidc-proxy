@@ -9,6 +9,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @StateObject private var settings = AppSettings.shared
+    @StateObject private var launchAtLogin = LaunchAtLogin.shared
     @State private var portText: String = ""
     @State private var showAlert = false
     @State private var alertMessage = ""
@@ -185,6 +186,20 @@ struct SettingsView: View {
                 .padding(.vertical, 8)
             }
             
+            GroupBox("System Settings") {
+                VStack(spacing: 12) {
+                    HStack {
+                        Toggle("Launch at login", isOn: $launchAtLogin.isEnabled)
+                        Spacer()
+                    }
+                    
+                    Text("Start LiteLLM OIDC Proxy automatically when you log in to your Mac")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 8)
+            }
+            
             HStack {
                 Button("Cancel") {
                     dismiss()
@@ -201,7 +216,7 @@ struct SettingsView: View {
             }
         }
         .padding()
-        .frame(width: 500, height: 650)
+        .frame(width: 500, height: 720)
         .onAppear {
             portText = String(settings.port)
         }
