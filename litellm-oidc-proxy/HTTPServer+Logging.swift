@@ -33,8 +33,9 @@ extension HTTPServer {
         
         // Convert body to string for logging
         let requestBodyString = requestBody.flatMap { data in
-            if data.count > 10000 {
-                return String(data: data.prefix(10000), encoding: .utf8).map { $0 + "\n... (truncated)" }
+            let settings = AppSettings.shared
+            if settings.truncateLogs && data.count > settings.logTruncationLimit {
+                return String(data: data.prefix(settings.logTruncationLimit), encoding: .utf8).map { $0 + "\n... (truncated)" }
             } else {
                 return String(data: data, encoding: .utf8)
             }
@@ -230,9 +231,11 @@ class StreamingDelegate: NSObject, URLSessionDataDelegate {
     }
     
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-        // Store data for logging (limit size)
-        if responseData.count < 10000 {
-            responseData.append(data.prefix(10000 - responseData.count))
+        // Store data for logging (limit size if truncation is enabled)
+        let settings = AppSettings.shared
+        let limit = settings.truncateLogs ? settings.logTruncationLimit : Int.max
+        if responseData.count < limit {
+            responseData.append(data.prefix(limit - responseData.count))
         }
         
         // Stream data chunks

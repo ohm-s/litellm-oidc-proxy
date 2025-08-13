@@ -36,6 +36,14 @@ class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(autoStartProxy, forKey: "autoStartProxy") }
     }
     
+    @Published var truncateLogs: Bool {
+        didSet { UserDefaults.standard.set(truncateLogs, forKey: "truncateLogs") }
+    }
+    
+    @Published var logTruncationLimit: Int {
+        didSet { UserDefaults.standard.set(logTruncationLimit, forKey: "logTruncationLimit") }
+    }
+    
     static let shared = AppSettings()
     
     var isConfigurationValid: Bool {
@@ -52,6 +60,8 @@ class AppSettings: ObservableObject {
         self.keycloakClientSecret = KeychainHelper.load(key: "keycloakClientSecret") ?? ""
         self.litellmEndpoint = UserDefaults.standard.string(forKey: "litellmEndpoint") ?? ""
         self.autoStartProxy = UserDefaults.standard.bool(forKey: "autoStartProxy")
+        self.truncateLogs = UserDefaults.standard.object(forKey: "truncateLogs") as? Bool ?? true
+        self.logTruncationLimit = UserDefaults.standard.object(forKey: "logTruncationLimit") as? Int ?? 10000
     }
 }
 

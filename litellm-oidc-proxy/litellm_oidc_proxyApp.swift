@@ -124,7 +124,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
         if logViewerWindow == nil {
             let hostingView = NSHostingView(rootView: LogViewerView())
             logViewerWindow = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 1000, height: 700),
+                contentRect: NSRect(x: 0, y: 0, width: 1400, height: 700),
                 styleMask: [.titled, .closable, .resizable],
                 backing: .buffered,
                 defer: false

@@ -366,8 +366,9 @@ class HTTPServer: ObservableObject {
         
         // Convert body to string for logging
         let requestBodyString = request.httpBody.flatMap { data in
-            if data.count > 10000 {
-                return String(data: data.prefix(10000), encoding: .utf8).map { $0 + "\n... (truncated)" }
+            let settings = AppSettings.shared
+            if settings.truncateLogs && data.count > settings.logTruncationLimit {
+                return String(data: data.prefix(settings.logTruncationLimit), encoding: .utf8).map { $0 + "\n... (truncated)" }
             } else {
                 return String(data: data, encoding: .utf8)
             }

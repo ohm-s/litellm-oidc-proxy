@@ -186,6 +186,35 @@ struct SettingsView: View {
                 .padding(.vertical, 8)
             }
             
+            GroupBox("Logging Settings") {
+                VStack(spacing: 12) {
+                    HStack {
+                        Toggle("Truncate large request/response bodies", isOn: $settings.truncateLogs)
+                        Spacer()
+                    }
+                    
+                    if settings.truncateLogs {
+                        HStack {
+                            Text("Truncation limit (characters):")
+                                .frame(width: 180, alignment: .trailing)
+                            TextField("10000", value: $settings.logTruncationLimit, format: .number)
+                                .frame(width: 100)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                            Spacer()
+                        }
+                        
+                        Text("Large bodies will be truncated to save database space")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Warning: Storing full request/response bodies may use significant disk space")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    }
+                }
+                .padding(.vertical, 8)
+            }
+            
             GroupBox("System Settings") {
                 VStack(spacing: 12) {
                     HStack {
@@ -216,7 +245,7 @@ struct SettingsView: View {
             }
         }
         .padding()
-        .frame(width: 500, height: 720)
+        .frame(width: 500, height: 820)
         .onAppear {
             portText = String(settings.port)
         }
