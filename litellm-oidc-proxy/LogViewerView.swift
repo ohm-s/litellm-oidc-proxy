@@ -44,22 +44,42 @@ struct LogViewerView: View {
     
     var body: some View {
         VStack(spacing: 0) {
+            // Title Bar
+            HStack {
+                Text("Request Logs")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color(NSColor.windowBackgroundColor))
+            
+            Divider()
+            
             HSplitView {
                 // Left panel - Request list
                 VStack(spacing: 0) {
-                // Toolbar
-                HStack {
-                    TextField("Search...", text: $searchText)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .frame(width: 200)
+                    // Toolbar
+                    HStack {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+                        TextField("Search requests...", text: $searchText)
+                            .textFieldStyle(PlainTextFieldStyle())
+                    }
+                    .padding(8)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .cornerRadius(8)
+                    .frame(width: 250)
                     
-                    Picker("Filter", selection: $filterStatus) {
-                        Text("All").tag("all")
-                        Text("Success").tag("success")
-                        Text("Errors").tag("error")
+                    Picker("", selection: $filterStatus) {
+                        Label("All", systemImage: "list.bullet").tag("all")
+                        Label("Success", systemImage: "checkmark.circle").tag("success")
+                        Label("Errors", systemImage: "exclamationmark.triangle").tag("error")
                     }
                     .pickerStyle(SegmentedPickerStyle())
-                    .frame(width: 200)
+                    .frame(width: 180)
                     
                     Spacer()
                     
@@ -76,10 +96,10 @@ struct LogViewerView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.gray.opacity(0.1))
-                    .cornerRadius(6)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .cornerRadius(8)
                     
                     Divider()
                         .frame(height: 20)
@@ -151,39 +171,41 @@ struct LogViewerView: View {
                     }
                     .help("Debug info")
                 }
-                .padding(10)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color(NSColor.controlBackgroundColor))
                 
                 Divider()
                 
-                // Request list - Simple approach
-                VStack {
-                    if filteredLogs.isEmpty {
-                        Spacer()
-                        Text("No logs to display")
-                            .foregroundColor(.secondary)
-                        Spacer()
-                    } else {
-                        // Just show first 5 logs as text
-                        ForEach(filteredLogs.prefix(5), id: \.id) { log in
-                            Text("\(log.method) \(log.path) - Status: \(log.responseStatus)")
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(10)
-                                .background(Color.blue.opacity(0.1))
-                                .onTapGesture {
-                                    selectedLog = log
-                                }
+                // Request list with proper scrolling
+                ScrollView {
+                    VStack(spacing: 0) {
+                        if filteredLogs.isEmpty {
+                            VStack {
+                                Spacer()
+                                Text("No logs to display")
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                            }
+                            .frame(maxHeight: .infinity)
+                        } else {
+                            ForEach(filteredLogs, id: \.id) { log in
+                                RequestRowView(log: log, isSelected: selectedLog?.id == log.id)
+                                    .onTapGesture {
+                                        selectedLog = log
+                                    }
+                                
+                                Divider()
+                                    .opacity(0.5)
+                            }
                         }
-                        Spacer()
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding()
-            }
-            .frame(minWidth: 400, idealWidth: 500)
-            
-            Divider()
-            
-            // Right panel - Request details
+                }
+                .frame(minWidth: 400, idealWidth: 500, maxWidth: .infinity)
+                
+                // Right panel - Request details
             if let log = selectedLog {
                 RequestDetailView(log: log)
                     .frame(minWidth: 400)
@@ -194,12 +216,12 @@ struct LogViewerView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            }
-            .frame(minWidth: 900, minHeight: 600)
-            
-            // Status bar at bottom
-            Divider()
-            HStack {
+        }
+        .frame(minWidth: 900, minHeight: 600)
+        
+        // Status bar at bottom
+        Divider()
+        HStack {
                 // Success/Error breakdown
                 HStack(spacing: 12) {
                     HStack(spacing: 4) {
@@ -259,45 +281,60 @@ struct RequestRowView: View {
     let isSelected: Bool
     
     var body: some View {
-        HStack(spacing: 10) {
-            // Status indicator
-            Circle()
-                .fill(statusColor)
-                .frame(width: 8, height: 8)
-            
-            // Method
-            Text(log.method)
-                .font(.system(.body, design: .monospaced))
-                .foregroundColor(.primary)
-                .frame(width: 60, alignment: .leading)
+        HStack(spacing: 12) {
+            // Status indicator with method
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 10, height: 10)
+                
+                Text(log.method)
+                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    .foregroundColor(methodColor)
+                    .frame(width: 55, alignment: .leading)
+            }
             
             // Path
             Text(log.path)
+                .font(.system(size: 13))
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .foregroundColor(.primary)
             
             Spacer()
             
-            // Status code
+            // Status code with background
             Text("\(log.responseStatus)")
-                .font(.system(.body, design: .monospaced))
-                .foregroundColor(statusColor)
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundColor(statusTextColor)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background(statusColor.opacity(0.2))
+                .cornerRadius(4)
             
             // Duration
-            Text(log.formattedDuration)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .frame(width: 60, alignment: .trailing)
+            HStack(spacing: 4) {
+                Image(systemName: "clock")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                Text(log.formattedDuration)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+            .frame(width: 70, alignment: .trailing)
             
             // Timestamp
             Text(log.formattedTimestamp)
-                .font(.caption)
+                .font(.system(size: 11))
                 .foregroundColor(.secondary)
+                .frame(width: 90, alignment: .trailing)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
+        )
         .contentShape(Rectangle())
     }
     
@@ -315,6 +352,36 @@ struct RequestRowView: View {
             return .gray
         }
     }
+    
+    var statusTextColor: Color {
+        switch log.responseStatus {
+        case 200..<300:
+            return Color(red: 0, green: 0.5, blue: 0)
+        case 300..<400:
+            return Color(red: 0.7, green: 0.7, blue: 0)
+        case 400..<500:
+            return Color(red: 0.8, green: 0.4, blue: 0)
+        case 500..<600:
+            return Color(red: 0.7, green: 0, blue: 0)
+        default:
+            return Color.gray
+        }
+    }
+    
+    var methodColor: Color {
+        switch log.method {
+        case "GET":
+            return .blue
+        case "POST":
+            return .green
+        case "PUT", "PATCH":
+            return .orange
+        case "DELETE":
+            return .red
+        default:
+            return .primary
+        }
+    }
 }
 
 struct RequestDetailView: View {
@@ -324,22 +391,60 @@ struct RequestDetailView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
-            VStack(alignment: .leading, spacing: 10) {
-                Text("\(log.method) \(log.path)")
-                    .font(.title3)
-                    .bold()
-                
-                HStack(spacing: 20) {
-                    Label("\(log.responseStatus)", systemImage: "circle.fill")
-                        .foregroundColor(statusColor)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .bottom, spacing: 16) {
+                    // Method badge
+                    Text(log.method)
+                        .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(methodBadgeColor)
+                        .cornerRadius(6)
                     
-                    Label(log.formattedDuration, systemImage: "timer")
+                    // Path
+                    Text(log.path)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
                     
-                    Label(log.formattedTimestamp, systemImage: "clock")
+                    Spacer()
                 }
-                .font(.caption)
+                
+                HStack(spacing: 24) {
+                    // Status
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(statusColor)
+                            .frame(width: 12, height: 12)
+                        Text("\(log.responseStatus)")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(statusColor)
+                    }
+                    
+                    // Duration
+                    HStack(spacing: 6) {
+                        Image(systemName: "timer")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Text(log.formattedDuration)
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    // Timestamp
+                    HStack(spacing: 6) {
+                        Image(systemName: "clock")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Text(log.formattedTimestamp)
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
-            .padding()
+            .padding(20)
+            .background(Color(NSColor.controlBackgroundColor))
             
             Divider()
             
@@ -391,10 +496,39 @@ struct RequestDetailView: View {
             return .gray
         }
     }
+    
+    var methodBadgeColor: Color {
+        switch log.method {
+        case "GET":
+            return .blue
+        case "POST":
+            return .green
+        case "PUT", "PATCH":
+            return .orange
+        case "DELETE":
+            return .red
+        default:
+            return .gray
+        }
+    }
 }
 
 struct RequestTabView: View {
     let log: RequestLog
+    
+    var formattedBody: String {
+        guard let body = log.requestBody else { return "" }
+        
+        // Try to parse as JSON and format it
+        if let data = body.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data, options: []),
+           let prettyData = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]),
+           let prettyString = String(data: prettyData, encoding: .utf8) {
+            return prettyString
+        }
+        
+        return body
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
@@ -402,13 +536,18 @@ struct RequestTabView: View {
                 Text("Body")
                     .font(.headline)
                 
-                ScrollView(.horizontal) {
-                    Text(body)
-                        .font(.system(.body, design: .monospaced))
+                ScrollView {
+                    Text(formattedBody)
+                        .font(.system(size: 12, design: .monospaced))
                         .textSelection(.enabled)
-                        .padding(10)
-                        .background(Color.gray.opacity(0.1))
-                        .cornerRadius(5)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(Color(NSColor.textBackgroundColor))
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                        )
                 }
             } else {
                 Text("No request body")
@@ -421,6 +560,20 @@ struct RequestTabView: View {
 struct ResponseTabView: View {
     let log: RequestLog
     
+    var formattedBody: String {
+        guard let body = log.responseBody else { return "" }
+        
+        // Try to parse as JSON and format it
+        if let data = body.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data, options: []),
+           let prettyData = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]),
+           let prettyString = String(data: prettyData, encoding: .utf8) {
+            return prettyString
+        }
+        
+        return body
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             if let error = log.error {
@@ -428,25 +581,37 @@ struct ResponseTabView: View {
                     .font(.headline)
                     .foregroundColor(.red)
                 
-                Text(error)
-                    .font(.system(.body, design: .monospaced))
-                    .textSelection(.enabled)
-                    .padding(10)
-                    .background(Color.red.opacity(0.1))
-                    .cornerRadius(5)
+                ScrollView {
+                    Text(error)
+                        .font(.system(size: 12, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                        )
+                }
             }
             
             if let body = log.responseBody, !body.isEmpty {
                 Text("Body")
                     .font(.headline)
                 
-                ScrollView(.horizontal) {
-                    Text(body)
-                        .font(.system(.body, design: .monospaced))
+                ScrollView {
+                    Text(formattedBody)
+                        .font(.system(size: 12, design: .monospaced))
                         .textSelection(.enabled)
-                        .padding(10)
-                        .background(Color.gray.opacity(0.1))
-                        .cornerRadius(5)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(Color(NSColor.textBackgroundColor))
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                        )
                 }
             } else {
                 Text("No response body")
