@@ -30,6 +30,8 @@ class DatabaseManager {
     private let duration = Expression<Double?>("duration")
     private let tokenUsed = Expression<String?>("token_used")
     private let error = Expression<String?>("error")
+    private let isRequestTruncated = Expression<Bool>("is_request_truncated")
+    private let isResponseTruncated = Expression<Bool>("is_response_truncated")
     
     private init(isTest: Bool = false) {
         do {
@@ -101,6 +103,8 @@ class DatabaseManager {
             t.column(duration)
             t.column(tokenUsed)
             t.column(error)
+            t.column(isRequestTruncated, defaultValue: false)
+            t.column(isResponseTruncated, defaultValue: false)
         })
         
         // Create indices
@@ -133,7 +137,9 @@ class DatabaseManager {
                 responseBody <- log.responseBody,
                 duration <- log.duration,
                 tokenUsed <- log.tokenUsed,
-                error <- log.error
+                error <- log.error,
+                isRequestTruncated <- log.isRequestTruncated,
+                isResponseTruncated <- log.isResponseTruncated
             )
             
             try db.run(insert)
@@ -155,7 +161,9 @@ class DatabaseManager {
                 responseBody <- log.responseBody,
                 duration <- log.duration,
                 tokenUsed <- log.tokenUsed,
-                error <- log.error
+                error <- log.error,
+                isRequestTruncated <- log.isRequestTruncated,
+                isResponseTruncated <- log.isResponseTruncated
             ))
             print("DatabaseManager: Successfully updated log ID: \(log.id.uuidString)")
         } catch {
@@ -189,7 +197,9 @@ class DatabaseManager {
                         responseBody: row[responseBody],
                         duration: row[duration] ?? 0,
                         tokenUsed: row[tokenUsed],
-                        error: row[error]
+                        error: row[error],
+                        isRequestTruncated: (try? row.get(isRequestTruncated)) ?? false,
+                        isResponseTruncated: (try? row.get(isResponseTruncated)) ?? false
                     )
                     
                     fetchedLogs.append(log)
@@ -232,7 +242,9 @@ class DatabaseManager {
                     responseBody: row[responseBody],
                     duration: row[duration] ?? 0,
                     tokenUsed: row[tokenUsed],
-                    error: row[error]
+                    error: row[error],
+                    isRequestTruncated: (try? row.get(isRequestTruncated)) ?? false,
+                    isResponseTruncated: (try? row.get(isResponseTruncated)) ?? false
                 )
                 
                 return log

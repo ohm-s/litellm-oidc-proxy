@@ -1,15 +1,6 @@
 {
-  "originHash" : "73fce0c0d04923ff22042ca92b89a013d134b85550906399a70f4eca971e30be",
+  "originHash" : "42598adf0e546dd7490b40b2fd0f5298dee9c098f71dcdbfcb5cc4c07573f374",
   "pins" : [
-    {
-      "identity" : "jsonpreview",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/RakuyoKit/JSONPreview.git",
-      "state" : {
-        "revision" : "259c8a56e4f3b4b1c92ad1e0493e53b0f79196fc",
-        "version" : "2.3.3"
-      }
-    },
     {
       "identity" : "sqlite.swift",
       "kind" : "remoteSourceControl",

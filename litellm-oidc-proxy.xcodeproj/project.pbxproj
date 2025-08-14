@@ -196,7 +196,6 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				0018BD332E39741B008504A9 /* XCRemoteSwiftPackageReference "SQLite" */,
-				0070D6B32E4C3BC30084E44E /* XCRemoteSwiftPackageReference "JSONPreview" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 00846E902E39431C009206C8 /* Products */;
@@ -562,14 +561,6 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 0.15.4;
-			};
-		};
-		0070D6B32E4C3BC30084E44E /* XCRemoteSwiftPackageReference "JSONPreview" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/RakuyoKit/JSONPreview.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.3.3;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

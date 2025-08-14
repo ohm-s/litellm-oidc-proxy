@@ -19,11 +19,8 @@ struct LogViewerView: View {
     }
     
     var filteredLogs: [RequestLog] {
-        // Always fetch fresh from database
-        let allLogs = DatabaseManager.shared.fetchLogs()
-        print("LogViewerView: Fetched \(allLogs.count) logs directly from database")
-        
-        let filtered = allLogs.filter { log in
+        // Use the logger's published logs property which updates automatically
+        let filtered = logger.logs.filter { log in
             let matchesSearch = searchText.isEmpty || 
                 log.path.localizedCaseInsensitiveContains(searchText) ||
                 log.method.localizedCaseInsensitiveContains(searchText) ||
@@ -34,10 +31,6 @@ struct LogViewerView: View {
                 (filterStatus == "error" && log.responseStatus >= 400)
             
             return matchesSearch && matchesStatus
-        }
-        print("LogViewerView: Filtered logs count: \(filtered.count) from total: \(allLogs.count)")
-        if !filtered.isEmpty {
-            print("LogViewerView: First log: \(filtered[0].method) \(filtered[0].path)")
         }
         return filtered
     }
@@ -105,36 +98,7 @@ struct LogViewerView: View {
                         .frame(height: 20)
                     
                     Button(action: { 
-                        print("LogViewerView: Refreshing logs from database...")
-                        refreshTrigger = UUID() // This will trigger filteredLogs to re-compute
-                        
-                        // Show alert with most recent log directly from database
-                        let freshLogs = DatabaseManager.shared.fetchLogs()
-                        print("LogViewerView: Database contains \(freshLogs.count) total logs")
-                        if let firstLog = freshLogs.first {
-                            let alert = NSAlert()
-                            alert.messageText = "Most Recent Log"
-                            alert.informativeText = """
-                            Method: \(firstLog.method)
-                            Path: \(firstLog.path)
-                            Status: \(firstLog.responseStatus)
-                            Duration: \(firstLog.formattedDuration)
-                            Timestamp: \(firstLog.formattedTimestamp)
-                            ID: \(firstLog.id.uuidString)
-                            
-                            Total logs in database: \(freshLogs.count)
-                            """
-                            alert.alertStyle = .informational
-                            alert.addButton(withTitle: "OK")
-                            alert.runModal()
-                        } else {
-                            let alert = NSAlert()
-                            alert.messageText = "No Logs"
-                            alert.informativeText = "No logs found in database. Total count: \(freshLogs.count)"
-                            alert.alertStyle = .warning
-                            alert.addButton(withTitle: "OK")
-                            alert.runModal()
-                        }
+                        logger.refreshLogs()
                     }) {
                         Image(systemName: "arrow.clockwise")
                     }
@@ -515,6 +479,18 @@ struct RequestDetailView: View {
 
 struct RequestTabView: View {
     let log: RequestLog
+    @State private var isExpanded = false
+    @State private var showingJSONViewer = false
+    
+    private let previewLimit = 1000 // Show first 1000 chars in preview
+    private let webViewThreshold = 5000 // Use web view for bodies larger than 5KB
+    
+    private var isValidJSON: Bool {
+        guard !formattedBody.isEmpty else { return false }
+        let trimmed = formattedBody.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (trimmed.hasPrefix("{") && trimmed.hasSuffix("}")) || 
+               (trimmed.hasPrefix("[") && trimmed.hasSuffix("]"))
+    }
     
     var formattedBody: String {
         guard let body = log.requestBody else { return "" }
@@ -530,14 +506,70 @@ struct RequestTabView: View {
         return body
     }
     
+    var displayBody: String {
+        if isExpanded || formattedBody.count <= previewLimit {
+            return formattedBody
+        } else {
+            return String(formattedBody.prefix(previewLimit)) + "\n..."
+        }
+    }
+    
+    var isLargeBody: Bool {
+        formattedBody.count > previewLimit
+    }
+    
+    var shouldUseWebView: Bool {
+        formattedBody.count > webViewThreshold
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             if let body = log.requestBody, !body.isEmpty {
-                Text("Body")
-                    .font(.headline)
+                HStack {
+                    Text("Body")
+                        .font(.headline)
+                    
+                    if isLargeBody {
+                        Text("(\(formattedBody.count) characters)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    if shouldUseWebView && !log.isRequestTruncated && isValidJSON {
+                        Button(action: {
+                            showingJSONViewer = true
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "safari")
+                                    .font(.system(size: 10))
+                                Text("View in JSON Viewer")
+                                    .font(.caption)
+                            }
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .foregroundColor(.accentColor)
+                    } else if isLargeBody {
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                isExpanded.toggle()
+                            }
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                                    .font(.system(size: 10))
+                                Text(isExpanded ? "Show Less" : "Show All")
+                                    .font(.caption)
+                            }
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .foregroundColor(.accentColor)
+                    }
+                }
                 
                 ScrollView {
-                    Text(formattedBody)
+                    Text(shouldUseWebView ? String(formattedBody.prefix(previewLimit)) + "\n\n[Content too large - use JSON Viewer to see full content]" : displayBody)
                         .font(.system(size: 12, design: .monospaced))
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -554,11 +586,30 @@ struct RequestTabView: View {
                     .foregroundColor(.secondary)
             }
         }
+        .sheet(isPresented: $showingJSONViewer) {
+            JSONViewerSheet(
+                title: "Request Body - \(log.method) \(log.path)",
+                jsonString: formattedBody,
+                isPresented: $showingJSONViewer
+            )
+        }
     }
 }
 
 struct ResponseTabView: View {
     let log: RequestLog
+    @State private var isExpanded = false
+    @State private var showingJSONViewer = false
+    
+    private let previewLimit = 1000 // Show first 1000 chars in preview
+    private let webViewThreshold = 5000 // Use web view for bodies larger than 5KB
+    
+    private var isValidJSON: Bool {
+        guard !formattedBody.isEmpty else { return false }
+        let trimmed = formattedBody.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (trimmed.hasPrefix("{") && trimmed.hasSuffix("}")) || 
+               (trimmed.hasPrefix("[") && trimmed.hasSuffix("]"))
+    }
     
     var formattedBody: String {
         guard let body = log.responseBody else { return "" }
@@ -572,6 +623,22 @@ struct ResponseTabView: View {
         }
         
         return body
+    }
+    
+    var displayBody: String {
+        if isExpanded || formattedBody.count <= previewLimit {
+            return formattedBody
+        } else {
+            return String(formattedBody.prefix(previewLimit)) + "\n..."
+        }
+    }
+    
+    var isLargeBody: Bool {
+        formattedBody.count > previewLimit
+    }
+    
+    var shouldUseWebView: Bool {
+        formattedBody.count > webViewThreshold
     }
     
     var body: some View {
@@ -597,11 +664,51 @@ struct ResponseTabView: View {
             }
             
             if let body = log.responseBody, !body.isEmpty {
-                Text("Body")
-                    .font(.headline)
+                HStack {
+                    Text("Body")
+                        .font(.headline)
+                    
+                    if isLargeBody {
+                        Text("(\(formattedBody.count) characters)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    if shouldUseWebView && !log.isResponseTruncated && isValidJSON {
+                        Button(action: {
+                            showingJSONViewer = true
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "safari")
+                                    .font(.system(size: 10))
+                                Text("View in JSON Viewer")
+                                    .font(.caption)
+                            }
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .foregroundColor(.accentColor)
+                    } else if isLargeBody {
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                isExpanded.toggle()
+                            }
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                                    .font(.system(size: 10))
+                                Text(isExpanded ? "Show Less" : "Show All")
+                                    .font(.caption)
+                            }
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .foregroundColor(.accentColor)
+                    }
+                }
                 
                 ScrollView {
-                    Text(formattedBody)
+                    Text(shouldUseWebView ? String(formattedBody.prefix(previewLimit)) + "\n\n[Content too large - use JSON Viewer to see full content]" : displayBody)
                         .font(.system(size: 12, design: .monospaced))
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -617,6 +724,13 @@ struct ResponseTabView: View {
                 Text("No response body")
                     .foregroundColor(.secondary)
             }
+        }
+        .sheet(isPresented: $showingJSONViewer) {
+            JSONViewerSheet(
+                title: "Response Body - \(log.method) \(log.path)",
+                jsonString: formattedBody,
+                isPresented: $showingJSONViewer
+            )
         }
     }
 }

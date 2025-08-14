@@ -124,8 +124,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
         if logViewerWindow == nil {
             let hostingView = NSHostingView(rootView: LogViewerView())
             logViewerWindow = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 1400, height: 700),
-                styleMask: [.titled, .closable, .resizable],
+                contentRect: NSRect(x: 0, y: 0, width: 1600, height: 900),
+                styleMask: [.titled, .closable, .resizable, .miniaturizable],
                 backing: .buffered,
                 defer: false
             )
@@ -134,6 +134,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
             logViewerWindow?.contentView = hostingView
             logViewerWindow?.isReleasedWhenClosed = false
             logViewerWindow?.delegate = self
+            logViewerWindow?.minSize = NSSize(width: 1200, height: 600)
+            logViewerWindow?.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         }
         
         logViewerWindow?.makeKeyAndOrderFront(nil)

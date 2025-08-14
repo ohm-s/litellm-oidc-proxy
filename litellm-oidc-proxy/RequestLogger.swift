@@ -20,12 +20,15 @@ struct RequestLog: Identifiable, Codable {
     let duration: TimeInterval
     let tokenUsed: String?
     let error: String?
+    let isRequestTruncated: Bool
+    let isResponseTruncated: Bool
     
     init(id: UUID = UUID(), timestamp: Date, method: String, path: String, 
          requestHeaders: [String: String], requestBody: String?, 
          responseStatus: Int, responseHeaders: [String: String], 
          responseBody: String?, duration: TimeInterval, 
-         tokenUsed: String?, error: String?) {
+         tokenUsed: String?, error: String?,
+         isRequestTruncated: Bool = false, isResponseTruncated: Bool = false) {
         self.id = id
         self.timestamp = timestamp
         self.method = method
@@ -38,6 +41,8 @@ struct RequestLog: Identifiable, Codable {
         self.duration = duration
         self.tokenUsed = tokenUsed
         self.error = error
+        self.isRequestTruncated = isRequestTruncated
+        self.isResponseTruncated = isResponseTruncated
     }
     
     var statusColor: String {
@@ -133,10 +138,15 @@ class RequestLogger: ObservableObject {
         }
         let duration = Date().timeIntervalSince(startTime)
         
+        // Check if request body was truncated
+        let isRequestTruncated = requestBody?.contains("... (truncated)") ?? false
+        
         // Convert response body to string (truncate if enabled and too large)
+        var isResponseTruncated = false
         let responseBodyString = responseBody.flatMap { data in
             let settings = AppSettings.shared
             if settings.truncateLogs && data.count > settings.logTruncationLimit {
+                isResponseTruncated = true
                 return String(data: data.prefix(settings.logTruncationLimit), encoding: .utf8).map { $0 + "\n... (truncated)" }
             } else {
                 return String(data: data, encoding: .utf8)
@@ -154,7 +164,9 @@ class RequestLogger: ObservableObject {
             responseBody: responseBodyString,
             duration: duration,
             tokenUsed: tokenUsed,
-            error: error
+            error: error,
+            isRequestTruncated: isRequestTruncated,
+            isResponseTruncated: isResponseTruncated
         )
         
         // Additional debug info
