@@ -24,6 +24,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
     var httpServer: HTTPServer!
     var settingsWindow: NSWindow?
     var logViewerWindow: NSWindow?
+    var statsLastUpdated: Date?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -90,9 +91,42 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
         if httpServer.isRunning {
             menu.addItem(NSMenuItem.separator())
             
-            let statsTitle = NSMenuItem(title: "📊 Quick Stats", action: nil, keyEquivalent: "")
-            statsTitle.isEnabled = false
-            menu.addItem(statsTitle)
+            // Stats header with refresh button
+            let statsHeaderItem = NSMenuItem()
+            let statsHeaderView = NSView(frame: NSRect(x: 0, y: 0, width: 220, height: 24))
+            
+            let statsTitle = NSTextField(labelWithString: "📊 Quick Stats")
+            statsTitle.font = .systemFont(ofSize: 13, weight: .medium)
+            statsTitle.frame = NSRect(x: 8, y: 2, width: 120, height: 20)
+            statsHeaderView.addSubview(statsTitle)
+            
+            // Refresh button
+            let refreshButton = NSButton(frame: NSRect(x: 180, y: 2, width: 20, height: 20))
+            refreshButton.bezelStyle = .texturedRounded
+            refreshButton.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: "Refresh")
+            refreshButton.imagePosition = .imageOnly
+            refreshButton.isBordered = false
+            refreshButton.target = self
+            refreshButton.action = #selector(refreshStats)
+            refreshButton.toolTip = "Refresh stats"
+            statsHeaderView.addSubview(refreshButton)
+            
+            // Last updated label
+            if let lastUpdated = statsLastUpdated {
+                let formatter = RelativeDateTimeFormatter()
+                formatter.unitsStyle = .abbreviated
+                let relativeTime = formatter.localizedString(for: lastUpdated, relativeTo: Date())
+                
+                let updatedLabel = NSTextField(labelWithString: relativeTime)
+                updatedLabel.font = .systemFont(ofSize: 10)
+                updatedLabel.textColor = .secondaryLabelColor
+                updatedLabel.frame = NSRect(x: 110, y: 2, width: 70, height: 20)
+                updatedLabel.alignment = .right
+                statsHeaderView.addSubview(updatedLabel)
+            }
+            
+            statsHeaderItem.view = statsHeaderView
+            menu.addItem(statsHeaderItem)
             
             // Get stats
             let logCount = DatabaseManager.shared.getLogCount()
@@ -131,6 +165,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
             let dbItem = NSMenuItem(title: "  Database: \(dbSize)", action: nil, keyEquivalent: "")
             dbItem.isEnabled = false
             menu.addItem(dbItem)
+            
+            // Mark stats as updated
+            statsLastUpdated = Date()
         }
         
         statusItem.menu = menu
@@ -145,6 +182,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
             httpServer.start()
         }
         updateStatusIcon()
+    }
+    
+    @objc func refreshStats() {
+        // Force refresh logs from database
+        RequestLogger.shared.refreshLogs()
+        
+        // Close and reopen menu to refresh stats
+        statusItem.menu = nil
+        
+        // Small delay to ensure data is loaded
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.showMenu()
+        }
     }
     
     @objc func openSettings() {
