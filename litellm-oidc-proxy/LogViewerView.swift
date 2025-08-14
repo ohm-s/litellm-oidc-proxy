@@ -13,6 +13,8 @@ struct LogViewerView: View {
     @State private var searchText = ""
     @State private var filterStatus: String = "all"
     @State private var refreshTrigger = UUID()
+    @State private var databaseSize = DatabaseManager.shared.getFormattedDatabaseSize()
+    @State private var logCount = DatabaseManager.shared.getLogCount()
     
     init() {
         print("LogViewerView: Initialized, current logs: \(RequestLogger.shared.logs.count)")
@@ -99,12 +101,18 @@ struct LogViewerView: View {
                     
                     Button(action: { 
                         logger.refreshLogs()
+                        databaseSize = DatabaseManager.shared.getFormattedDatabaseSize()
+                        logCount = DatabaseManager.shared.getLogCount()
                     }) {
                         Image(systemName: "arrow.clockwise")
                     }
                     .help("Refresh")
                     
-                    Button(action: { logger.clearLogs() }) {
+                    Button(action: { 
+                        logger.clearLogs()
+                        databaseSize = DatabaseManager.shared.getFormattedDatabaseSize()
+                        logCount = DatabaseManager.shared.getLogCount()
+                    }) {
                         Image(systemName: "trash")
                     }
                     .help("Clear all logs")
@@ -174,6 +182,11 @@ struct LogViewerView: View {
                                     
                                     Button(action: {
                                         logger.loadMoreLogs()
+                                        // Update database info after loading more
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                            databaseSize = DatabaseManager.shared.getFormattedDatabaseSize()
+                                            logCount = DatabaseManager.shared.getLogCount()
+                                        }
                                     }) {
                                         Text(logger.isLoadingMore ? "Loading..." : "Load More")
                                             .font(.system(size: 13))
@@ -231,14 +244,28 @@ struct LogViewerView: View {
                 
                 Spacer()
                 
-                // Total database count
-                Text("Total logs in database: \(DatabaseManager.shared.getLogCount())")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                // Database info
+                HStack(spacing: 12) {
+                    Text("Total logs: \(logCount)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Divider()
+                        .frame(height: 12)
+                    
+                    Text("Database size: \(databaseSize)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(Color(NSColor.controlBackgroundColor))
+        }
+        .onAppear {
+            // Update database info when view appears
+            databaseSize = DatabaseManager.shared.getFormattedDatabaseSize()
+            logCount = DatabaseManager.shared.getLogCount()
         }
     }
     

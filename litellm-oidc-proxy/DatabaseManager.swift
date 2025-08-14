@@ -270,4 +270,34 @@ class DatabaseManager {
             return 0
         }
     }
+    
+    func getDatabaseSize() -> Int64 {
+        do {
+            let dbPath: String
+            if DatabaseManager.testInstance != nil {
+                // For test instance, return 0
+                return 0
+            } else {
+                let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+                let appDir = appSupport.appendingPathComponent("litellm-oidc-proxy", isDirectory: true)
+                dbPath = appDir.appendingPathComponent("requests.db").path
+            }
+            
+            let attributes = try FileManager.default.attributesOfItem(atPath: dbPath)
+            if let fileSize = attributes[.size] as? Int64 {
+                return fileSize
+            }
+            return 0
+        } catch {
+            print("DatabaseManager: Failed to get database size: \(error)")
+            return 0
+        }
+    }
+    
+    func getFormattedDatabaseSize() -> String {
+        let size = getDatabaseSize()
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: size)
+    }
 }
