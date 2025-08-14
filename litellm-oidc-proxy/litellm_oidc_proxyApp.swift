@@ -77,8 +77,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
         menu.addItem(NSMenuItem(title: statusTitle, action: nil, keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         
-        // Quick Stats section
+        let toggleTitle = httpServer.isRunning ? "Stop Proxy" : "Start Proxy"
+        let toggleItem = NSMenuItem(title: toggleTitle, action: #selector(toggleServer), keyEquivalent: "")
+        menu.addItem(toggleItem)
+        
+        menu.addItem(NSMenuItem(title: "View Logs...", action: #selector(openLogViewer), keyEquivalent: "l"))
+        menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        
+        // Quick Stats section - below Quit
         if httpServer.isRunning {
+            menu.addItem(NSMenuItem.separator())
+            
             let statsTitle = NSMenuItem(title: "📊 Quick Stats", action: nil, keyEquivalent: "")
             statsTitle.isEnabled = false
             menu.addItem(statsTitle)
@@ -120,18 +131,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
             let dbItem = NSMenuItem(title: "  Database: \(dbSize)", action: nil, keyEquivalent: "")
             dbItem.isEnabled = false
             menu.addItem(dbItem)
-            
-            menu.addItem(NSMenuItem.separator())
         }
-        
-        let toggleTitle = httpServer.isRunning ? "Stop Proxy" : "Start Proxy"
-        let toggleItem = NSMenuItem(title: toggleTitle, action: #selector(toggleServer), keyEquivalent: "")
-        menu.addItem(toggleItem)
-        
-        menu.addItem(NSMenuItem(title: "View Logs...", action: #selector(openLogViewer), keyEquivalent: "l"))
-        menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         
         statusItem.menu = menu
         statusItem.button?.performClick(nil)
