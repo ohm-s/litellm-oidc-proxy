@@ -54,8 +54,8 @@ struct StreamingResponseParser {
                                     currentBlockIndex = index
                                     currentContentBlock = contentBlock
                                     
-                                    // Initialize content block
-                                    if contentBlock["type"] as? String == "text" {
+                                    // Initialize text field if not present
+                                    if contentBlock["type"] as? String == "text" && currentContentBlock?["text"] == nil {
                                         currentContentBlock?["text"] = ""
                                     } else if contentBlock["type"] as? String == "tool_use",
                                               let input = contentBlock["input"] as? [String: Any] {
@@ -67,11 +67,18 @@ struct StreamingResponseParser {
                                 if let index = json["index"] as? Int,
                                    let delta = json["delta"] as? [String: Any] {
                                     
-                                    if let textDelta = delta["text_delta"] as? String {
+                                    print("DEBUG: Processing delta - index: \(index), delta: \(delta)")
+                                    
+                                    if let deltaType = delta["type"] as? String, deltaType == "text_delta",
+                                       let text = delta["text"] as? String {
                                         // Append text to current block
-                                        if index == currentBlockIndex {
-                                            let currentText = currentContentBlock?["text"] as? String ?? ""
-                                            currentContentBlock?["text"] = currentText + textDelta
+                                        if index == currentBlockIndex, var block = currentContentBlock {
+                                            let currentText = block["text"] as? String ?? ""
+                                            block["text"] = currentText + text
+                                            currentContentBlock = block
+                                            print("DEBUG: Updated text to: \(block["text"] ?? "nil")")
+                                        } else {
+                                            print("Warning: Received text delta for index \(index) but current block index is \(currentBlockIndex)")
                                         }
                                     } else if let partialJson = delta["partial_json"] as? String {
                                         // For tool use, accumulate the JSON
@@ -87,6 +94,8 @@ struct StreamingResponseParser {
                                    index == currentBlockIndex,
                                    var block = currentContentBlock {
                                     
+                                    print("DEBUG: Stopping block at index \(index), block content: \(block)")
+                                    
                                     // For tool use, parse the accumulated JSON
                                     if block["type"] as? String == "tool_use",
                                        let partialJson = block["partial_json"] as? String,
@@ -101,6 +110,7 @@ struct StreamingResponseParser {
                                         contentBlocks.append([:])
                                     }
                                     contentBlocks[index] = block
+                                    print("DEBUG: Saved block to contentBlocks[\(index)]: \(block)")
                                 }
                                 
                             case "message_delta":
