@@ -32,6 +32,7 @@ class DatabaseManager {
     private let error = Expression<String?>("error")
     private let isRequestTruncated = Expression<Bool>("is_request_truncated")
     private let isResponseTruncated = Expression<Bool>("is_response_truncated")
+    private let model = Expression<String?>("model")
     
     private init(isTest: Bool = false) {
         do {
@@ -57,25 +58,15 @@ class DatabaseManager {
             // Create database connection
             db = try Connection(dbPath)
             
-            // Setup database
+            // Run migrations first
+            try DatabaseMigrations.migrate(db: db)
+            
+            // Setup database (creates table if it doesn't exist)
             try setupDatabase()
             
             // Test if we can read from the database
-            do {
-                let count = getLogCount()
-                print("DatabaseManager: Total logs in database: \(count)")
-                
-                // Try to fetch one log to test compatibility
-                if count > 0 {
-                    _ = try db.prepare(logs.limit(1))
-                    print("DatabaseManager: Database schema is compatible")
-                }
-            } catch {
-                print("DatabaseManager: Database schema incompatible, recreating database: \(error)")
-                // Drop and recreate the table
-                try db.run(logs.drop(ifExists: true))
-                try setupDatabase()
-            }
+            let count = getLogCount()
+            print("DatabaseManager: Total logs in database: \(count)")
             
         } catch {
             fatalError("DatabaseManager: Failed to initialize database: \(error)")
@@ -105,6 +96,7 @@ class DatabaseManager {
             t.column(error)
             t.column(isRequestTruncated, defaultValue: false)
             t.column(isResponseTruncated, defaultValue: false)
+            t.column(model)
         })
         
         // Create indices
@@ -139,7 +131,8 @@ class DatabaseManager {
                 tokenUsed <- log.tokenUsed,
                 error <- log.error,
                 isRequestTruncated <- log.isRequestTruncated,
-                isResponseTruncated <- log.isResponseTruncated
+                isResponseTruncated <- log.isResponseTruncated,
+                model <- log.model
             )
             
             try db.run(insert)
@@ -163,7 +156,8 @@ class DatabaseManager {
                 tokenUsed <- log.tokenUsed,
                 error <- log.error,
                 isRequestTruncated <- log.isRequestTruncated,
-                isResponseTruncated <- log.isResponseTruncated
+                isResponseTruncated <- log.isResponseTruncated,
+                model <- log.model
             ))
             print("DatabaseManager: Successfully updated log ID: \(log.id.uuidString)")
         } catch {
@@ -176,37 +170,33 @@ class DatabaseManager {
             var fetchedLogs: [RequestLog] = []
             
             for row in try db.prepare(logs.order(timestamp.desc)) {
-                do {
-                    let requestHeadersDict = row[requestHeaders].flatMap { data in
-                        try? JSONDecoder().decode([String: String].self, from: data)
-                    } ?? [:]
-                    
-                    let responseHeadersDict = row[responseHeaders].flatMap { data in
-                        try? JSONDecoder().decode([String: String].self, from: data)
-                    } ?? [:]
-                    
-                    let log = RequestLog(
-                        id: UUID(uuidString: row[id]) ?? UUID(),
-                        timestamp: Date(timeIntervalSince1970: row[timestamp]),
-                        method: row[method],
-                        path: row[path],
-                        requestHeaders: requestHeadersDict,
-                        requestBody: row[requestBody],
-                        responseStatus: row[responseStatus] ?? 0,
-                        responseHeaders: responseHeadersDict,
-                        responseBody: row[responseBody],
-                        duration: row[duration] ?? 0,
-                        tokenUsed: row[tokenUsed],
-                        error: row[error],
-                        isRequestTruncated: (try? row.get(isRequestTruncated)) ?? false,
-                        isResponseTruncated: (try? row.get(isResponseTruncated)) ?? false
-                    )
-                    
-                    fetchedLogs.append(log)
-                } catch {
-                    print("DatabaseManager: Failed to parse log row: \(error)")
-                    // Skip this row and continue
-                }
+                let requestHeadersDict = row[requestHeaders].flatMap { data in
+                    try? JSONDecoder().decode([String: String].self, from: data)
+                } ?? [:]
+                
+                let responseHeadersDict = row[responseHeaders].flatMap { data in
+                    try? JSONDecoder().decode([String: String].self, from: data)
+                } ?? [:]
+                
+                let log = RequestLog(
+                    id: UUID(uuidString: row[id]) ?? UUID(),
+                    timestamp: Date(timeIntervalSince1970: row[timestamp]),
+                    method: row[method],
+                    path: row[path],
+                    requestHeaders: requestHeadersDict,
+                    requestBody: row[requestBody],
+                    responseStatus: row[responseStatus] ?? 0,
+                    responseHeaders: responseHeadersDict,
+                    responseBody: row[responseBody],
+                    duration: row[duration] ?? 0,
+                    tokenUsed: row[tokenUsed],
+                    error: row[error],
+                    isRequestTruncated: (try? row.get(isRequestTruncated)) ?? false,
+                    isResponseTruncated: (try? row.get(isResponseTruncated)) ?? false,
+                    model: (try? row.get(model)) ?? nil
+                )
+                
+                fetchedLogs.append(log)
             }
             
             print("DatabaseManager: Fetched \(fetchedLogs.count) logs from database")
@@ -244,7 +234,8 @@ class DatabaseManager {
                     tokenUsed: row[tokenUsed],
                     error: row[error],
                     isRequestTruncated: (try? row.get(isRequestTruncated)) ?? false,
-                    isResponseTruncated: (try? row.get(isResponseTruncated)) ?? false
+                    isResponseTruncated: (try? row.get(isResponseTruncated)) ?? false,
+                    model: (try? row.get(model)) ?? nil
                 )
                 
                 return log

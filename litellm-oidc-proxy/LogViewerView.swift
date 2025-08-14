@@ -267,6 +267,17 @@ struct RequestRowView: View {
             
             Spacer()
             
+            // Model badge if available
+            if let model = log.model {
+                Text(model)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.blue)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(4)
+            }
+            
             // Status code with background
             Text("\(log.responseStatus)")
                 .font(.system(size: 12, weight: .medium, design: .monospaced))
@@ -404,6 +415,18 @@ struct RequestDetailView: View {
                         Text(log.formattedTimestamp)
                             .font(.system(size: 14))
                             .foregroundColor(.secondary)
+                    }
+                    
+                    // Model (if available)
+                    if let model = log.model {
+                        HStack(spacing: 6) {
+                            Image(systemName: "cpu")
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Text(model)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.primary)
+                        }
                     }
                 }
             }
@@ -600,6 +623,7 @@ struct ResponseTabView: View {
     let log: RequestLog
     @State private var isExpanded = false
     @State private var showingJSONViewer = false
+    @State private var showingStreamingConverter = false
     
     private let previewLimit = 1000 // Show first 1000 chars in preview
     private let webViewThreshold = 5000 // Use web view for bodies larger than 5KB
@@ -676,6 +700,23 @@ struct ResponseTabView: View {
                     
                     Spacer()
                     
+                    // Convert streaming response button for v1/messages
+                    if log.path.contains("/v1/messages") && 
+                       StreamingResponseParser.isAnthropicStreamingResponse(log.responseBody ?? "") {
+                        Button(action: {
+                            showingStreamingConverter = true
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                    .font(.system(size: 10))
+                                Text("Convert Streaming Response")
+                                    .font(.caption)
+                            }
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .foregroundColor(.accentColor)
+                    }
+                    
                     if shouldUseWebView && !log.isResponseTruncated && isValidJSON {
                         Button(action: {
                             showingJSONViewer = true
@@ -730,6 +771,13 @@ struct ResponseTabView: View {
                 title: "Response Body - \(log.method) \(log.path)",
                 jsonString: formattedBody,
                 isPresented: $showingJSONViewer
+            )
+        }
+        .sheet(isPresented: $showingStreamingConverter) {
+            StreamingResponseConverterSheet(
+                title: "Converted Message - \(log.method) \(log.path)",
+                sseData: log.responseBody ?? "",
+                isPresented: $showingStreamingConverter
             )
         }
     }

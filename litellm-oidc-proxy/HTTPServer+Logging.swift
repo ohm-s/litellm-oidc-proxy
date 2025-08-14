@@ -19,7 +19,8 @@ extension HTTPServer {
         path: String,
         requestHeaders: [String: String] = [:],
         requestBody: Data? = nil,
-        error: String? = nil
+        error: String? = nil,
+        model: String? = nil
     ) async {
         print("HTTPServer: Sending error response - \(code) for \(method) \(path)")
         let response = """
@@ -51,7 +52,8 @@ extension HTTPServer {
             responseHeaders: ["Content-Type": "text/plain"],
             responseBody: message.data(using: .utf8),
             startTime: startTime,
-            error: error ?? message
+            error: error ?? message,
+            model: model
         )
         
         if let data = response.data(using: .utf8) {
@@ -72,7 +74,8 @@ extension HTTPServer {
         path: String,
         requestHeaders: [String: String],
         requestBody: String?,
-        token: String
+        token: String,
+        model: String? = nil
     ) async {
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -101,7 +104,8 @@ extension HTTPServer {
                 responseHeaders: responseHeaders,
                 responseBody: data,
                 startTime: startTime,
-                tokenUsed: String(token.prefix(50)) + "..."
+                tokenUsed: String(token.prefix(50)) + "...",
+                model: model
             )
             
             // Build response
@@ -129,7 +133,7 @@ extension HTTPServer {
             }
         } catch {
             print("Request failed: \(error)")
-            await sendErrorResponse(502, "Request to upstream failed", on: connection, startTime: startTime, method: method, path: path, error: error.localizedDescription)
+            await sendErrorResponse(502, "Request to upstream failed", on: connection, startTime: startTime, method: method, path: path, error: error.localizedDescription, model: model)
         }
     }
     
@@ -141,7 +145,8 @@ extension HTTPServer {
         path: String,
         requestHeaders: [String: String],
         requestBody: String?,
-        token: String
+        token: String,
+        model: String? = nil
     ) async {
         let session = URLSession(configuration: .default)
         
@@ -153,7 +158,8 @@ extension HTTPServer {
             path: path,
             requestHeaders: requestHeaders,
             requestBody: requestBody,
-            token: String(token.prefix(50)) + "..."
+            token: String(token.prefix(50)) + "...",
+            model: model
         )
         task.delegate = delegate
         task.resume()
@@ -179,8 +185,9 @@ class StreamingDelegate: NSObject, URLSessionDataDelegate {
     private var responseStatus: Int = 0
     private var responseHeaders: [String: String] = [:]
     private var responseData = Data()
+    private let model: String?
     
-    init(connection: NWConnection, startTime: Date, method: String, path: String, requestHeaders: [String: String], requestBody: String?, token: String) {
+    init(connection: NWConnection, startTime: Date, method: String, path: String, requestHeaders: [String: String], requestBody: String?, token: String, model: String? = nil) {
         self.connection = connection
         self.startTime = startTime
         self.method = method
@@ -188,6 +195,7 @@ class StreamingDelegate: NSObject, URLSessionDataDelegate {
         self.requestHeaders = requestHeaders
         self.requestBody = requestBody
         self.token = token
+        self.model = model
     }
     
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
@@ -260,7 +268,8 @@ class StreamingDelegate: NSObject, URLSessionDataDelegate {
                 responseBody: nil,
                 startTime: startTime,
                 tokenUsed: token,
-                error: error.localizedDescription
+                error: error.localizedDescription,
+                model: model
             )
         } else {
             RequestLogger.shared.updateResponse(
@@ -272,7 +281,8 @@ class StreamingDelegate: NSObject, URLSessionDataDelegate {
                 responseHeaders: responseHeaders,
                 responseBody: responseData,
                 startTime: startTime,
-                tokenUsed: token
+                tokenUsed: token,
+                model: model
             )
         }
         

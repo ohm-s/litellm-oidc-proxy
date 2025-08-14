@@ -12,15 +12,47 @@ struct JSONWebView: NSViewRepresentable {
     let jsonString: String
     let isDarkMode: Bool
     
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
     func makeNSView(context: Context) -> WKWebView {
         let webView = WKWebView()
+        webView.navigationDelegate = context.coordinator
         webView.setValue(false, forKey: "drawsBackground") // Make background transparent
         return webView
+    }
+    
+    class Coordinator: NSObject, WKNavigationDelegate {
+        // Navigation delegate methods can be added here if needed
     }
     
     func updateNSView(_ webView: WKWebView, context: Context) {
         let html = generateHTML(for: jsonString, isDarkMode: isDarkMode)
         webView.loadHTMLString(html, baseURL: nil)
+    }
+    
+    private func escapeJSONForJavaScript(_ json: String) -> String {
+        // Handle empty or invalid JSON
+        guard !json.isEmpty else {
+            return "'{}'"
+        }
+        
+        // Try to validate the JSON first
+        if let data = json.data(using: .utf8),
+           let _ = try? JSONSerialization.jsonObject(with: data, options: []) {
+            // Valid JSON - escape for JavaScript string literal
+            let escaped = json
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "'", with: "\\'")
+                .replacingOccurrences(of: "\n", with: "\\n")
+                .replacingOccurrences(of: "\r", with: "\\r")
+                .replacingOccurrences(of: "\t", with: "\\t")
+            return "'\(escaped)'"
+        } else {
+            // Invalid JSON - return empty object
+            return "'{}'"
+        }
     }
     
     private func generateHTML(for json: String, isDarkMode: Bool) -> String {
@@ -119,7 +151,8 @@ struct JSONWebView: NSViewRepresentable {
                 }
                 """ : "")
             </style>
-            <script src="https://cdn.jsdelivr.net/npm/json-formatter-js@2.5.23/dist/json-formatter.umd.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/json-formatter-js@2.5.23/dist/json-formatter.umd.min.js" 
+                    onerror="console.error('Failed to load JSONFormatter from CDN')"></script>
         </head>
         <body>
             <div class="toolbar">
@@ -133,24 +166,55 @@ struct JSONWebView: NSViewRepresentable {
             
             <script>
                 let formatter;
-                const jsonString = \(json.data(using: .utf8).map { try! JSONSerialization.jsonObject(with: $0, options: []) }.flatMap { try? JSONSerialization.data(withJSONObject: $0, options: []) }.flatMap { String(data: $0, encoding: .utf8) }.map { "'\($0.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'").replacingOccurrences(of: "\n", with: "\\n").replacingOccurrences(of: "\r", with: "\\r"))'" } ?? "'null'");
+                const jsonString = \(escapeJSONForJavaScript(json));
                 
-                try {
-                    const jsonData = JSON.parse(jsonString);
-                    
-                    // Create formatter with all levels expanded initially
-                    formatter = new JSONFormatter(jsonData, Infinity, {
-                        theme: '\(theme)',
-                        animateOpen: true,
-                        animateClose: true,
-                        hoverPreviewEnabled: true,
-                        hoverPreviewArrayCount: 100,
-                        hoverPreviewFieldCount: 5
-                    });
-                    
-                    document.getElementById('json-container').appendChild(formatter.render());
-                } catch (e) {
-                    document.getElementById('json-container').innerHTML = '<div class="error">Invalid JSON: ' + e.message + '</div>';
+                function displayJSON() {
+                    try {
+                        const jsonData = JSON.parse(jsonString);
+                        
+                        // Clear any existing content
+                        document.getElementById('json-container').innerHTML = '';
+                        
+                        // Check if JSONFormatter is loaded
+                        if (typeof JSONFormatter === 'undefined') {
+                            // Fallback: display formatted JSON as text
+                            const prettyJSON = JSON.stringify(jsonData, null, 2);
+                            document.getElementById('json-container').innerHTML = '<pre style="overflow: auto; padding: 20px;">' + escapeHtml(prettyJSON) + '</pre>';
+                            return;
+                        }
+                        
+                        // Create formatter with all levels expanded initially
+                        formatter = new JSONFormatter(jsonData, Infinity, {
+                            theme: '\(theme)',
+                            animateOpen: true,
+                            animateClose: true,
+                            hoverPreviewEnabled: true,
+                            hoverPreviewArrayCount: 100,
+                            hoverPreviewFieldCount: 5
+                        });
+                        
+                        document.getElementById('json-container').appendChild(formatter.render());
+                    } catch (e) {
+                        document.getElementById('json-container').innerHTML = '<div class="error">Error: ' + e.message + '</div>';
+                    }
+                }
+                
+                function escapeHtml(text) {
+                    const div = document.createElement('div');
+                    div.textContent = text;
+                    return div.innerHTML;
+                }
+                
+                // Wait for page to load and JSONFormatter library
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', displayJSON);
+                } else {
+                    // Try immediately if DOM is ready
+                    displayJSON();
+                    // Also try after a short delay in case library is still loading
+                    if (typeof JSONFormatter === 'undefined') {
+                        setTimeout(displayJSON, 500);
+                    }
                 }
                 
                 function expandAll() {

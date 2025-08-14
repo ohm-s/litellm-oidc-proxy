@@ -22,13 +22,15 @@ struct RequestLog: Identifiable, Codable {
     let error: String?
     let isRequestTruncated: Bool
     let isResponseTruncated: Bool
+    let model: String?
     
     init(id: UUID = UUID(), timestamp: Date, method: String, path: String, 
          requestHeaders: [String: String], requestBody: String?, 
          responseStatus: Int, responseHeaders: [String: String], 
          responseBody: String?, duration: TimeInterval, 
          tokenUsed: String?, error: String?,
-         isRequestTruncated: Bool = false, isResponseTruncated: Bool = false) {
+         isRequestTruncated: Bool = false, isResponseTruncated: Bool = false,
+         model: String? = nil) {
         self.id = id
         self.timestamp = timestamp
         self.method = method
@@ -43,6 +45,7 @@ struct RequestLog: Identifiable, Codable {
         self.error = error
         self.isRequestTruncated = isRequestTruncated
         self.isResponseTruncated = isResponseTruncated
+        self.model = model
     }
     
     var statusColor: String {
@@ -129,7 +132,8 @@ class RequestLogger: ObservableObject {
         responseBody: Data?,
         startTime: Date,
         tokenUsed: String? = nil,
-        error: String? = nil
+        error: String? = nil,
+        model: String? = nil
     ) {
         // Debug logging
         if method.isEmpty || path.isEmpty {
@@ -166,7 +170,8 @@ class RequestLogger: ObservableObject {
             tokenUsed: tokenUsed,
             error: error,
             isRequestTruncated: isRequestTruncated,
-            isResponseTruncated: isResponseTruncated
+            isResponseTruncated: isResponseTruncated,
+            model: model
         )
         
         // Additional debug info
