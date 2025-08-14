@@ -77,6 +77,53 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
         menu.addItem(NSMenuItem(title: statusTitle, action: nil, keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         
+        // Quick Stats section
+        if httpServer.isRunning {
+            let statsTitle = NSMenuItem(title: "📊 Quick Stats", action: nil, keyEquivalent: "")
+            statsTitle.isEnabled = false
+            menu.addItem(statsTitle)
+            
+            // Get stats
+            let logCount = DatabaseManager.shared.getLogCount()
+            let dbSize = DatabaseManager.shared.getFormattedDatabaseSize()
+            let logger = RequestLogger.shared
+            
+            // Calculate today's stats
+            let calendar = Calendar.current
+            let startOfDay = calendar.startOfDay(for: Date())
+            let todayLogs = logger.logs.filter { $0.timestamp >= startOfDay }
+            let todayCount = todayLogs.count
+            let todayErrors = todayLogs.filter { $0.responseStatus >= 400 }.count
+            
+            // Calculate recent stats
+            let recentStats = calculateRecentStats()
+            
+            // Add stats items with better formatting
+            let todayItem = NSMenuItem(title: "  Today: \(todayCount) requests" + (todayErrors > 0 ? " (\(todayErrors) errors)" : ""), action: nil, keyEquivalent: "")
+            todayItem.isEnabled = false
+            menu.addItem(todayItem)
+            
+            let totalItem = NSMenuItem(title: "  Total: \(logCount.formatted()) requests", action: nil, keyEquivalent: "")
+            totalItem.isEnabled = false
+            menu.addItem(totalItem)
+            
+            let successItem = NSMenuItem(title: "  Success rate: \(recentStats.successRate) (last \(recentStats.sampleSize))", action: nil, keyEquivalent: "")
+            successItem.isEnabled = false
+            menu.addItem(successItem)
+            
+            if let avgDuration = recentStats.avgDuration {
+                let durationItem = NSMenuItem(title: "  Avg response: \(avgDuration)", action: nil, keyEquivalent: "")
+                durationItem.isEnabled = false
+                menu.addItem(durationItem)
+            }
+            
+            let dbItem = NSMenuItem(title: "  Database: \(dbSize)", action: nil, keyEquivalent: "")
+            dbItem.isEnabled = false
+            menu.addItem(dbItem)
+            
+            menu.addItem(NSMenuItem.separator())
+        }
+        
         let toggleTitle = httpServer.isRunning ? "Stop Proxy" : "Start Proxy"
         let toggleItem = NSMenuItem(title: toggleTitle, action: #selector(toggleServer), keyEquivalent: "")
         menu.addItem(toggleItem)
@@ -172,5 +219,34 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
         case .failure(let error):
             print("Auto-start failed: \(error.localizedDescription)")
         }
+    }
+    
+    private func calculateRecentStats() -> (successRate: String, avgDuration: String?, sampleSize: String) {
+        let logger = RequestLogger.shared
+        let recentLogs = Array(logger.logs.prefix(100)) // Look at last 100 requests
+        
+        guard !recentLogs.isEmpty else {
+            return (successRate: "N/A", avgDuration: nil, sampleSize: "0")
+        }
+        
+        // Calculate success rate
+        let successCount = recentLogs.filter { (200..<300).contains($0.responseStatus) }.count
+        let rate = Double(successCount) / Double(recentLogs.count) * 100
+        let successRate = String(format: "%.1f%%", rate)
+        
+        // Calculate average duration
+        let totalDuration = recentLogs.reduce(0.0) { $0 + $1.duration }
+        let avgDuration = totalDuration / Double(recentLogs.count)
+        
+        let avgDurationFormatted: String
+        if avgDuration < 1.0 {
+            avgDurationFormatted = String(format: "%.0fms", avgDuration * 1000)
+        } else {
+            avgDurationFormatted = String(format: "%.1fs", avgDuration)
+        }
+        
+        let sampleSize = recentLogs.count == 100 ? "100" : "\(recentLogs.count)"
+        
+        return (successRate: successRate, avgDuration: avgDurationFormatted, sampleSize: sampleSize)
     }
 }
