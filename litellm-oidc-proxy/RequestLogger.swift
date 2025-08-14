@@ -89,6 +89,12 @@ class RequestLogger: ObservableObject {
     private let database = DatabaseManager.shared
     private let queue = DispatchQueue(label: "com.litellm-oidc-proxy.requestlogger", attributes: .concurrent)
     
+    // Pagination
+    private let pageSize = 100
+    private var currentOffset = 0
+    @Published var hasMoreLogs = true
+    @Published var isLoadingMore = false
+    
     private init() {
         // Load initial logs from database
         refreshLogs()
@@ -96,12 +102,34 @@ class RequestLogger: ObservableObject {
     
     func refreshLogs() {
         queue.async(flags: .barrier) {
-            let fetchedLogs = self.database.fetchLogs()
+            self.currentOffset = 0
+            let fetchedLogs = self.database.fetchLogs(limit: self.pageSize, offset: 0)
             DispatchQueue.main.async {
                 self.logs = fetchedLogs
+                self.hasMoreLogs = fetchedLogs.count == self.pageSize
                 print("RequestLogger: Loaded \(fetchedLogs.count) logs from database")
                 // Force UI update
                 self.objectWillChange.send()
+            }
+        }
+    }
+    
+    func loadMoreLogs() {
+        guard !isLoadingMore && hasMoreLogs else { return }
+        
+        queue.async(flags: .barrier) {
+            DispatchQueue.main.async {
+                self.isLoadingMore = true
+            }
+            
+            self.currentOffset += self.pageSize
+            let fetchedLogs = self.database.fetchLogs(limit: self.pageSize, offset: self.currentOffset)
+            
+            DispatchQueue.main.async {
+                self.logs.append(contentsOf: fetchedLogs)
+                self.hasMoreLogs = fetchedLogs.count == self.pageSize
+                self.isLoadingMore = false
+                print("RequestLogger: Loaded \(fetchedLogs.count) more logs (total: \(self.logs.count))")
             }
         }
     }

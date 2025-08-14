@@ -166,10 +166,15 @@ class DatabaseManager {
     }
     
     func fetchLogs() -> [RequestLog] {
+        return fetchLogs(limit: Int.max, offset: 0)
+    }
+    
+    func fetchLogs(limit: Int = 100, offset: Int = 0) -> [RequestLog] {
         do {
             var fetchedLogs: [RequestLog] = []
             
-            for row in try db.prepare(logs.order(timestamp.desc)) {
+            let query = logs.order(timestamp.desc).limit(limit, offset: offset)
+            for row in try db.prepare(query) {
                 let requestHeadersDict = row[requestHeaders].flatMap { data in
                     try? JSONDecoder().decode([String: String].self, from: data)
                 } ?? [:]

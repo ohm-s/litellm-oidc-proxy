@@ -144,7 +144,7 @@ struct LogViewerView: View {
                 // Request list with proper scrolling
                 ScrollView {
                     VStack(spacing: 0) {
-                        if filteredLogs.isEmpty {
+                        if filteredLogs.isEmpty && !logger.isLoadingMore {
                             VStack {
                                 Spacer()
                                 Text("No logs to display")
@@ -161,6 +161,30 @@ struct LogViewerView: View {
                                 
                                 Divider()
                                     .opacity(0.5)
+                            }
+                            
+                            // Load more button
+                            if logger.hasMoreLogs && searchText.isEmpty && filterStatus == "all" {
+                                HStack {
+                                    if logger.isLoadingMore {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                            .padding(.trailing, 8)
+                                    }
+                                    
+                                    Button(action: {
+                                        logger.loadMoreLogs()
+                                    }) {
+                                        Text(logger.isLoadingMore ? "Loading..." : "Load More")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(.accentColor)
+                                    }
+                                    .disabled(logger.isLoadingMore)
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                                .padding(.vertical, 12)
+                                .frame(maxWidth: .infinity)
+                                .background(Color(NSColor.controlBackgroundColor))
                             }
                         }
                     }
