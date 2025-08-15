@@ -19,12 +19,11 @@ struct litellm_oidc_proxyApp: App {
     }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, ObservableObject {
+class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDelegate, ObservableObject {
     var statusItem: NSStatusItem!
     var httpServer: HTTPServer!
     var settingsWindow: NSWindow?
     var logViewerWindow: NSWindow?
-    var statsLastUpdated: Date?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -91,70 +90,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
         if httpServer.isRunning {
             menu.addItem(NSMenuItem.separator())
             
-            // Stats header with refresh button
-            let statsHeaderItem = NSMenuItem()
-            let statsHeaderView = NSView(frame: NSRect(x: 0, y: 0, width: 220, height: 24))
-            
-            let statsTitle = NSTextField(labelWithString: "📊 Quick Stats")
-            statsTitle.font = .systemFont(ofSize: 13, weight: .medium)
-            statsTitle.frame = NSRect(x: 8, y: 2, width: 120, height: 20)
-            statsHeaderView.addSubview(statsTitle)
-            
-            // Refresh button
-            let refreshButton = NSButton(frame: NSRect(x: 180, y: 2, width: 20, height: 20))
-            refreshButton.bezelStyle = .texturedRounded
-            refreshButton.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: "Refresh")
-            refreshButton.imagePosition = .imageOnly
-            refreshButton.isBordered = false
-            refreshButton.target = self
-            refreshButton.action = #selector(refreshStats)
-            refreshButton.toolTip = "Refresh stats"
-            statsHeaderView.addSubview(refreshButton)
-            
-            // Last updated label
-            if let lastUpdated = statsLastUpdated {
-                let formatter = RelativeDateTimeFormatter()
-                formatter.unitsStyle = .abbreviated
-                let relativeTime = formatter.localizedString(for: lastUpdated, relativeTo: Date())
-                
-                let updatedLabel = NSTextField(labelWithString: relativeTime)
-                updatedLabel.font = .systemFont(ofSize: 10)
-                updatedLabel.textColor = .secondaryLabelColor
-                updatedLabel.frame = NSRect(x: 110, y: 2, width: 70, height: 20)
-                updatedLabel.alignment = .right
-                statsHeaderView.addSubview(updatedLabel)
-            }
-            
-            statsHeaderItem.view = statsHeaderView
+            // Stats header
+            let statsHeaderItem = NSMenuItem(title: "📊 Quick Stats", action: nil, keyEquivalent: "")
+            statsHeaderItem.isEnabled = false
             menu.addItem(statsHeaderItem)
             
             // Get stats
             let logCount = DatabaseManager.shared.getLogCount()
             let dbSize = DatabaseManager.shared.getFormattedDatabaseSize()
-            let logger = RequestLogger.shared
-            
-            // Calculate today's stats
-            let calendar = Calendar.current
-            let startOfDay = calendar.startOfDay(for: Date())
-            let todayLogs = logger.logs.filter { $0.timestamp >= startOfDay }
-            let todayCount = todayLogs.count
-            let todayErrors = todayLogs.filter { $0.responseStatus >= 400 }.count
             
             // Calculate recent stats
             let recentStats = calculateRecentStats()
             
             // Add stats items with better formatting
-            let todayItem = NSMenuItem(title: "  Today: \(todayCount) requests" + (todayErrors > 0 ? " (\(todayErrors) errors)" : ""), action: nil, keyEquivalent: "")
-            todayItem.isEnabled = false
-            menu.addItem(todayItem)
-            
             let totalItem = NSMenuItem(title: "  Total: \(logCount.formatted()) requests", action: nil, keyEquivalent: "")
             totalItem.isEnabled = false
             menu.addItem(totalItem)
-            
-            let successItem = NSMenuItem(title: "  Success rate: \(recentStats.successRate) (last \(recentStats.sampleSize))", action: nil, keyEquivalent: "")
-            successItem.isEnabled = false
-            menu.addItem(successItem)
             
             if let avgDuration = recentStats.avgDuration {
                 let durationItem = NSMenuItem(title: "  Avg response: \(avgDuration)", action: nil, keyEquivalent: "")
@@ -165,14 +116,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
             let dbItem = NSMenuItem(title: "  Database: \(dbSize)", action: nil, keyEquivalent: "")
             dbItem.isEnabled = false
             menu.addItem(dbItem)
-            
-            // Mark stats as updated
-            statsLastUpdated = Date()
         }
         
+        menu.delegate = self
         statusItem.menu = menu
         statusItem.button?.performClick(nil)
-        statusItem.menu = nil
     }
     
     @objc func toggleServer() {
@@ -184,18 +132,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
         updateStatusIcon()
     }
     
-    @objc func refreshStats() {
-        // Force refresh logs from database
-        RequestLogger.shared.refreshLogs()
-        
-        // Close and reopen menu to refresh stats
-        statusItem.menu = nil
-        
-        // Small delay to ensure data is loaded
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            self?.showMenu()
-        }
-    }
     
     @objc func openSettings() {
         if settingsWindow == nil {
@@ -298,5 +234,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
         let sampleSize = recentLogs.count == 100 ? "100" : "\(recentLogs.count)"
         
         return (successRate: successRate, avgDuration: avgDurationFormatted, sampleSize: sampleSize)
+    }
+    
+    // MARK: - NSMenuDelegate
+    
+    func menuDidClose(_ menu: NSMenu) {
+        statusItem.menu = nil
     }
 }

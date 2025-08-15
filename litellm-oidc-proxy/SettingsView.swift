@@ -21,6 +21,7 @@ struct SettingsView: View {
     @State private var endpointTestSuccessful = false
     @State private var showModelsPopover = false
     @State private var availableModels: [String] = []
+    @State private var showModelsExplorer = false
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -148,6 +149,16 @@ struct SettingsView: View {
                             .frame(width: 400)
                         }
                         
+                        Button(action: {
+                            showModelsExplorer = true
+                        }) {
+                            HStack {
+                                Image(systemName: "list.bullet.rectangle")
+                                Text("Models Explorer")
+                            }
+                        }
+                        .disabled(settings.litellmEndpoint.isEmpty)
+                        
                         Spacer()
                     }
                     
@@ -253,6 +264,9 @@ struct SettingsView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(alertMessage)
+        }
+        .sheet(isPresented: $showModelsExplorer) {
+            ModelsExplorerView()
         }
     }
     
