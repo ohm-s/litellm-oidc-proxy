@@ -34,6 +34,25 @@ class DatabaseManager {
     private let isResponseTruncated = Expression<Bool>("is_response_truncated")
     private let model = Expression<String?>("model")
     
+    // Token tracking columns
+    private let promptTokens = Expression<Int?>("prompt_tokens")
+    private let completionTokens = Expression<Int?>("completion_tokens")
+    private let totalTokens = Expression<Int?>("total_tokens")
+    private let cacheCreationInputTokens = Expression<Int?>("cache_creation_input_tokens")
+    private let cacheReadInputTokens = Expression<Int?>("cache_read_input_tokens")
+    private let responseCost = Expression<Double?>("response_cost")
+    private let inputCost = Expression<Double?>("input_cost")
+    private let outputCost = Expression<Double?>("output_cost")
+    private let timeToFirstToken = Expression<Double?>("time_to_first_token")
+    private let tokensPerSecond = Expression<Double?>("tokens_per_second")
+    private let litellmCallId = Expression<String?>("litellm_call_id")
+    private let usageTier = Expression<String?>("usage_tier")
+    private let litellmModelId = Expression<String?>("litellm_model_id")
+    private let litellmResponseCost = Expression<Double?>("litellm_response_cost")
+    private let responseDurationMs = Expression<Double?>("response_duration_ms")
+    private let attemptedFallbacks = Expression<Int?>("attempted_fallbacks")
+    private let attemptedRetries = Expression<Int?>("attempted_retries")
+    
     private init(isTest: Bool = false) {
         do {
             let dbPath: String
@@ -132,7 +151,24 @@ class DatabaseManager {
                 error <- log.error,
                 isRequestTruncated <- log.isRequestTruncated,
                 isResponseTruncated <- log.isResponseTruncated,
-                model <- log.model
+                model <- log.model,
+                promptTokens <- log.promptTokens,
+                completionTokens <- log.completionTokens,
+                totalTokens <- log.totalTokens,
+                cacheCreationInputTokens <- log.cacheCreationInputTokens,
+                cacheReadInputTokens <- log.cacheReadInputTokens,
+                responseCost <- log.responseCost,
+                inputCost <- log.inputCost,
+                outputCost <- log.outputCost,
+                timeToFirstToken <- log.timeToFirstToken,
+                tokensPerSecond <- log.tokensPerSecond,
+                litellmCallId <- log.litellmCallId,
+                usageTier <- log.usageTier,
+                litellmModelId <- log.litellmModelId,
+                litellmResponseCost <- log.litellmResponseCost,
+                responseDurationMs <- log.responseDurationMs,
+                attemptedFallbacks <- log.attemptedFallbacks,
+                attemptedRetries <- log.attemptedRetries
             )
             
             try db.run(insert)
@@ -157,7 +193,24 @@ class DatabaseManager {
                 error <- log.error,
                 isRequestTruncated <- log.isRequestTruncated,
                 isResponseTruncated <- log.isResponseTruncated,
-                model <- log.model
+                model <- log.model,
+                promptTokens <- log.promptTokens,
+                completionTokens <- log.completionTokens,
+                totalTokens <- log.totalTokens,
+                cacheCreationInputTokens <- log.cacheCreationInputTokens,
+                cacheReadInputTokens <- log.cacheReadInputTokens,
+                responseCost <- log.responseCost,
+                inputCost <- log.inputCost,
+                outputCost <- log.outputCost,
+                timeToFirstToken <- log.timeToFirstToken,
+                tokensPerSecond <- log.tokensPerSecond,
+                litellmCallId <- log.litellmCallId,
+                usageTier <- log.usageTier,
+                litellmModelId <- log.litellmModelId,
+                litellmResponseCost <- log.litellmResponseCost,
+                responseDurationMs <- log.responseDurationMs,
+                attemptedFallbacks <- log.attemptedFallbacks,
+                attemptedRetries <- log.attemptedRetries
             ))
             print("DatabaseManager: Successfully updated log ID: \(log.id.uuidString)")
         } catch {
@@ -198,7 +251,24 @@ class DatabaseManager {
                     error: row[error],
                     isRequestTruncated: (try? row.get(isRequestTruncated)) ?? false,
                     isResponseTruncated: (try? row.get(isResponseTruncated)) ?? false,
-                    model: (try? row.get(model)) ?? nil
+                    model: (try? row.get(model)) ?? nil,
+                    promptTokens: try? row.get(promptTokens),
+                    completionTokens: try? row.get(completionTokens),
+                    totalTokens: try? row.get(totalTokens),
+                    cacheCreationInputTokens: try? row.get(cacheCreationInputTokens),
+                    cacheReadInputTokens: try? row.get(cacheReadInputTokens),
+                    responseCost: try? row.get(responseCost),
+                    inputCost: try? row.get(inputCost),
+                    outputCost: try? row.get(outputCost),
+                    timeToFirstToken: try? row.get(timeToFirstToken),
+                    tokensPerSecond: try? row.get(tokensPerSecond),
+                    litellmCallId: try? row.get(litellmCallId),
+                    usageTier: try? row.get(usageTier),
+                    litellmModelId: try? row.get(litellmModelId),
+                    litellmResponseCost: try? row.get(litellmResponseCost),
+                    responseDurationMs: try? row.get(responseDurationMs),
+                    attemptedFallbacks: try? row.get(attemptedFallbacks),
+                    attemptedRetries: try? row.get(attemptedRetries)
                 )
                 
                 fetchedLogs.append(log)
@@ -240,7 +310,24 @@ class DatabaseManager {
                     error: row[error],
                     isRequestTruncated: (try? row.get(isRequestTruncated)) ?? false,
                     isResponseTruncated: (try? row.get(isResponseTruncated)) ?? false,
-                    model: (try? row.get(model)) ?? nil
+                    model: (try? row.get(model)) ?? nil,
+                    promptTokens: try? row.get(promptTokens),
+                    completionTokens: try? row.get(completionTokens),
+                    totalTokens: try? row.get(totalTokens),
+                    cacheCreationInputTokens: try? row.get(cacheCreationInputTokens),
+                    cacheReadInputTokens: try? row.get(cacheReadInputTokens),
+                    responseCost: try? row.get(responseCost),
+                    inputCost: try? row.get(inputCost),
+                    outputCost: try? row.get(outputCost),
+                    timeToFirstToken: try? row.get(timeToFirstToken),
+                    tokensPerSecond: try? row.get(tokensPerSecond),
+                    litellmCallId: try? row.get(litellmCallId),
+                    usageTier: try? row.get(usageTier),
+                    litellmModelId: try? row.get(litellmModelId),
+                    litellmResponseCost: try? row.get(litellmResponseCost),
+                    responseDurationMs: try? row.get(responseDurationMs),
+                    attemptedFallbacks: try? row.get(attemptedFallbacks),
+                    attemptedRetries: try? row.get(attemptedRetries)
                 )
                 
                 return log

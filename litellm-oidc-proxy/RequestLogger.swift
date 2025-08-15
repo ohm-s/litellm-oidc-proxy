@@ -24,13 +24,48 @@ struct RequestLog: Identifiable, Codable {
     let isResponseTruncated: Bool
     let model: String?
     
+    // Core token fields
+    let promptTokens: Int?
+    let completionTokens: Int?
+    let totalTokens: Int?
+    
+    // Anthropic cache tokens
+    let cacheCreationInputTokens: Int?
+    let cacheReadInputTokens: Int?
+    
+    // Cost tracking
+    let responseCost: Double?
+    let inputCost: Double?
+    let outputCost: Double?
+    
+    // Performance metrics
+    let timeToFirstToken: Double?
+    let tokensPerSecond: Double?
+    
+    // Additional metadata
+    let litellmCallId: String?
+    let usageTier: String?
+    let litellmModelId: String?
+    let litellmResponseCost: Double?
+    let responseDurationMs: Double?
+    let attemptedFallbacks: Int?
+    let attemptedRetries: Int?
+    
     init(id: UUID = UUID(), timestamp: Date, method: String, path: String, 
          requestHeaders: [String: String], requestBody: String?, 
          responseStatus: Int, responseHeaders: [String: String], 
          responseBody: String?, duration: TimeInterval, 
          tokenUsed: String?, error: String?,
          isRequestTruncated: Bool = false, isResponseTruncated: Bool = false,
-         model: String? = nil) {
+         model: String? = nil,
+         promptTokens: Int? = nil, completionTokens: Int? = nil, totalTokens: Int? = nil,
+         cacheCreationInputTokens: Int? = nil, cacheReadInputTokens: Int? = nil,
+         responseCost: Double? = nil, inputCost: Double? = nil, outputCost: Double? = nil,
+         timeToFirstToken: Double? = nil, tokensPerSecond: Double? = nil,
+         litellmCallId: String? = nil, usageTier: String? = nil,
+         litellmModelId: String? = nil, litellmResponseCost: Double? = nil,
+         responseDurationMs: Double? = nil, attemptedFallbacks: Int? = nil,
+         attemptedRetries: Int? = nil) {
         self.id = id
         self.timestamp = timestamp
         self.method = method
@@ -46,6 +81,23 @@ struct RequestLog: Identifiable, Codable {
         self.isRequestTruncated = isRequestTruncated
         self.isResponseTruncated = isResponseTruncated
         self.model = model
+        self.promptTokens = promptTokens
+        self.completionTokens = completionTokens
+        self.totalTokens = totalTokens
+        self.cacheCreationInputTokens = cacheCreationInputTokens
+        self.cacheReadInputTokens = cacheReadInputTokens
+        self.responseCost = responseCost
+        self.inputCost = inputCost
+        self.outputCost = outputCost
+        self.timeToFirstToken = timeToFirstToken
+        self.tokensPerSecond = tokensPerSecond
+        self.litellmCallId = litellmCallId
+        self.usageTier = usageTier
+        self.litellmModelId = litellmModelId
+        self.litellmResponseCost = litellmResponseCost
+        self.responseDurationMs = responseDurationMs
+        self.attemptedFallbacks = attemptedFallbacks
+        self.attemptedRetries = attemptedRetries
     }
     
     var statusColor: String {
@@ -161,7 +213,8 @@ class RequestLogger: ObservableObject {
         startTime: Date,
         tokenUsed: String? = nil,
         error: String? = nil,
-        model: String? = nil
+        model: String? = nil,
+        tokenUsage: TokenUsage? = nil
     ) {
         // Debug logging
         if method.isEmpty || path.isEmpty {
@@ -199,7 +252,24 @@ class RequestLogger: ObservableObject {
             error: error,
             isRequestTruncated: isRequestTruncated,
             isResponseTruncated: isResponseTruncated,
-            model: model
+            model: model,
+            promptTokens: tokenUsage?.promptTokens,
+            completionTokens: tokenUsage?.completionTokens,
+            totalTokens: tokenUsage?.totalTokens,
+            cacheCreationInputTokens: tokenUsage?.cacheCreationInputTokens,
+            cacheReadInputTokens: tokenUsage?.cacheReadInputTokens,
+            responseCost: tokenUsage?.responseCost,
+            inputCost: tokenUsage?.inputCost,
+            outputCost: tokenUsage?.outputCost,
+            timeToFirstToken: tokenUsage?.timeToFirstToken,
+            tokensPerSecond: tokenUsage?.tokensPerSecond,
+            litellmCallId: tokenUsage?.litellmCallId,
+            usageTier: tokenUsage?.usageTier,
+            litellmModelId: tokenUsage?.litellmModelId,
+            litellmResponseCost: tokenUsage?.litellmResponseCost,
+            responseDurationMs: tokenUsage?.responseDurationMs,
+            attemptedFallbacks: tokenUsage?.attemptedFallbacks,
+            attemptedRetries: tokenUsage?.attemptedRetries
         )
         
         // Additional debug info

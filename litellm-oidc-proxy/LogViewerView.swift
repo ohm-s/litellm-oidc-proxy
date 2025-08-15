@@ -329,6 +329,21 @@ struct RequestRowView: View {
                     .cornerRadius(4)
             }
             
+            // Token count badge if available
+            if let tokens = log.totalTokens {
+                HStack(spacing: 2) {
+                    Image(systemName: "number.square")
+                        .font(.system(size: 10))
+                    Text("\(tokens)")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundColor(.purple)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.purple.opacity(0.1))
+                .cornerRadius(4)
+            }
+            
             // Status code with background
             Text("\(log.responseStatus)")
                 .font(.system(size: 12, weight: .medium, design: .monospaced))
@@ -494,6 +509,9 @@ struct RequestDetailView: View {
                 if log.tokenUsed != nil {
                     Text("Auth").tag(3)
                 }
+                if log.totalTokens != nil || log.litellmCallId != nil {
+                    Text("Tokens").tag(4)
+                }
             }
             .pickerStyle(SegmentedPickerStyle())
             .padding(.horizontal)
@@ -511,6 +529,8 @@ struct RequestDetailView: View {
                         HeadersTabView(log: log)
                     case 3:
                         AuthTabView(log: log)
+                    case 4:
+                        TokensTabView(log: log)
                     default:
                         EmptyView()
                     }
@@ -902,6 +922,276 @@ struct AuthTabView: View {
                         .cornerRadius(5)
                 }
             }
+        }
+    }
+}
+
+struct TokensTabView: View {
+    let log: RequestLog
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // Basic Token Usage
+                if log.totalTokens != nil || log.promptTokens != nil || log.completionTokens != nil {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Token Usage")
+                            .font(.headline)
+                        
+                        HStack(spacing: 40) {
+                            if let prompt = log.promptTokens {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Prompt")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text("\(prompt)")
+                                        .font(.system(size: 20, weight: .medium, design: .monospaced))
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                            
+                            if let completion = log.completionTokens {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Completion")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text("\(completion)")
+                                        .font(.system(size: 20, weight: .medium, design: .monospaced))
+                                        .foregroundColor(.green)
+                                }
+                            }
+                            
+                            if let total = log.totalTokens {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Total")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text("\(total)")
+                                        .font(.system(size: 20, weight: .medium, design: .monospaced))
+                                        .foregroundColor(.primary)
+                                }
+                            }
+                        }
+                        .padding()
+                        .background(Color(NSColor.textBackgroundColor))
+                        .cornerRadius(8)
+                    }
+                }
+                
+                // Cache Usage (Anthropic)
+                if log.cacheCreationInputTokens != nil || log.cacheReadInputTokens != nil {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Cache Usage")
+                            .font(.headline)
+                        
+                        HStack(spacing: 40) {
+                            if let cacheCreation = log.cacheCreationInputTokens {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Cache Creation")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text("\(cacheCreation)")
+                                        .font(.system(size: 16, weight: .medium, design: .monospaced))
+                                        .foregroundColor(.orange)
+                                }
+                            }
+                            
+                            if let cacheRead = log.cacheReadInputTokens {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Cache Read")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text("\(cacheRead)")
+                                        .font(.system(size: 16, weight: .medium, design: .monospaced))
+                                        .foregroundColor(.purple)
+                                }
+                            }
+                        }
+                        .padding()
+                        .background(Color(NSColor.textBackgroundColor))
+                        .cornerRadius(8)
+                    }
+                }
+                
+                // Cost Information
+                if log.responseCost != nil || log.litellmResponseCost != nil {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Cost")
+                            .font(.headline)
+                        
+                        HStack(spacing: 40) {
+                            if let cost = log.litellmResponseCost ?? log.responseCost {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Total Cost")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text(String(format: "$%.6f", cost))
+                                        .font(.system(size: 16, weight: .medium, design: .monospaced))
+                                        .foregroundColor(.primary)
+                                }
+                            }
+                            
+                            if let inputCost = log.inputCost {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Input Cost")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text(String(format: "$%.6f", inputCost))
+                                        .font(.system(size: 16, weight: .medium, design: .monospaced))
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                            
+                            if let outputCost = log.outputCost {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Output Cost")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text(String(format: "$%.6f", outputCost))
+                                        .font(.system(size: 16, weight: .medium, design: .monospaced))
+                                        .foregroundColor(.green)
+                                }
+                            }
+                        }
+                        .padding()
+                        .background(Color(NSColor.textBackgroundColor))
+                        .cornerRadius(8)
+                    }
+                }
+                
+                // Performance Metrics
+                if log.timeToFirstToken != nil || log.tokensPerSecond != nil || log.responseDurationMs != nil {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Performance")
+                            .font(.headline)
+                        
+                        HStack(spacing: 40) {
+                            if let ttft = log.timeToFirstToken {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Time to First Token")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text(String(format: "%.2f ms", ttft * 1000))
+                                        .font(.system(size: 16, weight: .medium, design: .monospaced))
+                                        .foregroundColor(.primary)
+                                }
+                            }
+                            
+                            if let tps = log.tokensPerSecond {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Tokens/Second")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text(String(format: "%.1f", tps))
+                                        .font(.system(size: 16, weight: .medium, design: .monospaced))
+                                        .foregroundColor(.primary)
+                                }
+                            }
+                            
+                            if let duration = log.responseDurationMs {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Response Duration")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text(String(format: "%.0f ms", duration))
+                                        .font(.system(size: 16, weight: .medium, design: .monospaced))
+                                        .foregroundColor(.primary)
+                                }
+                            }
+                        }
+                        .padding()
+                        .background(Color(NSColor.textBackgroundColor))
+                        .cornerRadius(8)
+                    }
+                }
+                
+                // Metadata
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Metadata")
+                        .font(.headline)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let callId = log.litellmCallId {
+                            HStack(alignment: .top) {
+                                Text("Call ID:")
+                                    .font(.system(.body, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                    .frame(minWidth: 120, alignment: .trailing)
+                                
+                                Text(callId)
+                                    .font(.system(.body, design: .monospaced))
+                                    .textSelection(.enabled)
+                                
+                                Spacer()
+                            }
+                        }
+                        
+                        if let modelId = log.litellmModelId {
+                            HStack(alignment: .top) {
+                                Text("Model ID:")
+                                    .font(.system(.body, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                    .frame(minWidth: 120, alignment: .trailing)
+                                
+                                Text(modelId)
+                                    .font(.system(.body, design: .monospaced))
+                                    .textSelection(.enabled)
+                                
+                                Spacer()
+                            }
+                        }
+                        
+                        if let tier = log.usageTier {
+                            HStack(alignment: .top) {
+                                Text("Usage Tier:")
+                                    .font(.system(.body, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                    .frame(minWidth: 120, alignment: .trailing)
+                                
+                                Text(tier)
+                                    .font(.system(.body, design: .monospaced))
+                                    .textSelection(.enabled)
+                                
+                                Spacer()
+                            }
+                        }
+                        
+                        if let fallbacks = log.attemptedFallbacks, fallbacks > 0 {
+                            HStack(alignment: .top) {
+                                Text("Fallbacks:")
+                                    .font(.system(.body, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                    .frame(minWidth: 120, alignment: .trailing)
+                                
+                                Text("\(fallbacks)")
+                                    .font(.system(.body, design: .monospaced))
+                                    .foregroundColor(.orange)
+                                
+                                Spacer()
+                            }
+                        }
+                        
+                        if let retries = log.attemptedRetries, retries > 0 {
+                            HStack(alignment: .top) {
+                                Text("Retries:")
+                                    .font(.system(.body, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                    .frame(minWidth: 120, alignment: .trailing)
+                                
+                                Text("\(retries)")
+                                    .font(.system(.body, design: .monospaced))
+                                    .foregroundColor(.orange)
+                                
+                                Spacer()
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color(NSColor.textBackgroundColor))
+                    .cornerRadius(8)
+                }
+            }
+            .padding()
         }
     }
 }

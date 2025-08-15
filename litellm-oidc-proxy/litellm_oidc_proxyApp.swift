@@ -113,6 +113,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
                 menu.addItem(durationItem)
             }
             
+            // Add token stats if available
+            if let totalTokens = recentStats.totalTokens {
+                let tokenItem = NSMenuItem(title: "  Recent tokens: \(totalTokens.formatted())", action: nil, keyEquivalent: "")
+                tokenItem.isEnabled = false
+                menu.addItem(tokenItem)
+                
+                if let avgTokens = recentStats.avgTokens {
+                    let avgTokenItem = NSMenuItem(title: "  Avg per request: \(Int(avgTokens).formatted())", action: nil, keyEquivalent: "")
+                    avgTokenItem.isEnabled = false
+                    menu.addItem(avgTokenItem)
+                }
+            }
+            
             let dbItem = NSMenuItem(title: "  Database: \(dbSize)", action: nil, keyEquivalent: "")
             dbItem.isEnabled = false
             menu.addItem(dbItem)
@@ -207,12 +220,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
         }
     }
     
-    private func calculateRecentStats() -> (successRate: String, avgDuration: String?, sampleSize: String) {
+    private func calculateRecentStats() -> (successRate: String, avgDuration: String?, sampleSize: String, totalTokens: Int?, avgTokens: Double?) {
         let logger = RequestLogger.shared
         let recentLogs = Array(logger.logs.prefix(100)) // Look at last 100 requests
         
         guard !recentLogs.isEmpty else {
-            return (successRate: "N/A", avgDuration: nil, sampleSize: "0")
+            return (successRate: "N/A", avgDuration: nil, sampleSize: "0", totalTokens: nil, avgTokens: nil)
         }
         
         // Calculate success rate
@@ -231,9 +244,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
             avgDurationFormatted = String(format: "%.1fs", avgDuration)
         }
         
+        // Calculate token statistics
+        let logsWithTokens = recentLogs.compactMap { log -> Int? in
+            return log.totalTokens
+        }
+        
+        let totalTokens: Int? = logsWithTokens.isEmpty ? nil : logsWithTokens.reduce(0, +)
+        let avgTokens: Double? = logsWithTokens.isEmpty ? nil : Double(totalTokens!) / Double(logsWithTokens.count)
+        
         let sampleSize = recentLogs.count == 100 ? "100" : "\(recentLogs.count)"
         
-        return (successRate: successRate, avgDuration: avgDurationFormatted, sampleSize: sampleSize)
+        return (successRate: successRate, avgDuration: avgDurationFormatted, sampleSize: sampleSize, totalTokens: totalTokens, avgTokens: avgTokens)
     }
     
     // MARK: - NSMenuDelegate

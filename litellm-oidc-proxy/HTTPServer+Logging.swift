@@ -53,7 +53,8 @@ extension HTTPServer {
             responseBody: message.data(using: .utf8),
             startTime: startTime,
             error: error ?? message,
-            model: model
+            model: model,
+            tokenUsage: nil  // No token usage for error responses
         )
         
         if let data = response.data(using: .utf8) {
@@ -94,6 +95,14 @@ extension HTTPServer {
                 }
             }
             
+            // Extract token usage from response
+            let tokenUsage = TokenUsageExtractor.extractFromNonStreamingResponse(
+                responseData: data,
+                responseHeaders: responseHeaders,
+                path: path,
+                duration: Date().timeIntervalSince(startTime)
+            )
+            
             // Log successful response
             RequestLogger.shared.updateResponse(
                 method: method,
@@ -105,7 +114,8 @@ extension HTTPServer {
                 responseBody: data,
                 startTime: startTime,
                 tokenUsed: String(token.prefix(50)) + "...",
-                model: model
+                model: model,
+                tokenUsage: tokenUsage
             )
             
             // Build response
@@ -187,6 +197,11 @@ class StreamingDelegate: NSObject, URLSessionDataDelegate {
     private var responseData = Data()
     private let model: String?
     
+    // For streaming token extraction
+    private var streamEvents: [String] = []
+    private var firstTokenTime: Date?
+    private var currentSSEBuffer = ""
+    
     init(connection: NWConnection, startTime: Date, method: String, path: String, requestHeaders: [String: String], requestBody: String?, token: String, model: String? = nil) {
         self.connection = connection
         self.startTime = startTime
@@ -246,6 +261,28 @@ class StreamingDelegate: NSObject, URLSessionDataDelegate {
             responseData.append(data.prefix(limit - responseData.count))
         }
         
+        // Parse SSE events for token extraction if this is a streaming response
+        if let stringData = String(data: data, encoding: .utf8) {
+            currentSSEBuffer += stringData
+            
+            // Process complete SSE events
+            let lines = currentSSEBuffer.components(separatedBy: "\n")
+            for i in 0..<lines.count - 1 {
+                let line = lines[i].trimmingCharacters(in: .whitespacesAndNewlines)
+                if !line.isEmpty {
+                    streamEvents.append(line)
+                    
+                    // Record time of first token
+                    if firstTokenTime == nil && (line.hasPrefix("data:") || line.hasPrefix("event:")) {
+                        firstTokenTime = Date()
+                    }
+                }
+            }
+            
+            // Keep the last incomplete line in the buffer
+            currentSSEBuffer = lines.last ?? ""
+        }
+        
         // Stream data chunks
         connection.send(content: data, completion: .contentProcessed { error in
             if let error = error {
@@ -269,9 +306,27 @@ class StreamingDelegate: NSObject, URLSessionDataDelegate {
                 startTime: startTime,
                 tokenUsed: token,
                 error: error.localizedDescription,
-                model: model
+                model: model,
+                tokenUsage: nil  // No token usage for error responses
             )
         } else {
+            // Process any remaining data in the SSE buffer
+            if !currentSSEBuffer.isEmpty {
+                let line = currentSSEBuffer.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !line.isEmpty {
+                    streamEvents.append(line)
+                }
+            }
+            
+            // Extract token usage from streaming response
+            let tokenUsage = TokenUsageExtractor.extractFromStreamingResponse(
+                streamEvents: streamEvents,
+                responseHeaders: responseHeaders,
+                path: path,
+                startTime: startTime,
+                firstTokenTime: firstTokenTime
+            )
+            
             RequestLogger.shared.updateResponse(
                 method: method,
                 path: path,
@@ -282,7 +337,8 @@ class StreamingDelegate: NSObject, URLSessionDataDelegate {
                 responseBody: responseData,
                 startTime: startTime,
                 tokenUsed: token,
-                model: model
+                model: model,
+                tokenUsage: tokenUsage
             )
         }
         
