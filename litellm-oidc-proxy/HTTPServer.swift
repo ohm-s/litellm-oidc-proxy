@@ -225,6 +225,31 @@ class HTTPServer: ObservableObject {
         // Don't log the request here - we'll log the complete request/response together
         print("HTTPServer: Request - \(method) \(path)")
         
+        // Check if this is a proxy management endpoint
+        if path == "/proxy/query" {
+            if method == "POST" {
+                await handleQueryEndpoint(requestHeaders: requestHeadersDict, requestBody: bodyData, on: connection, startTime: startTime)
+                return
+            } else if method == "OPTIONS" {
+                // Handle CORS preflight
+                let response = """
+                HTTP/1.1 200 OK\r
+                Access-Control-Allow-Origin: *\r
+                Access-Control-Allow-Methods: POST, OPTIONS\r
+                Access-Control-Allow-Headers: Content-Type\r
+                Content-Length: 0\r
+                Connection: close\r
+                \r
+                """
+                if let responseData = response.data(using: .utf8) {
+                    connection.send(content: responseData, completion: .contentProcessed { _ in
+                        connection.cancel()
+                    })
+                }
+                return
+            }
+        }
+        
         // Validate configuration
         guard !settings.litellmEndpoint.isEmpty,
               !settings.keycloakURL.isEmpty,
@@ -392,6 +417,72 @@ class HTTPServer: ObservableObject {
             }
         } else {
             await handleRegularRequest(request, on: connection, startTime: startTime, method: method, path: path, requestHeaders: requestHeadersDict, requestBody: requestBodyString, token: token)
+        }
+    }
+    
+    private func handleQueryEndpoint(requestHeaders: [String: String], requestBody: Data?, on connection: NWConnection, startTime: Date) async {
+        print("HTTPServer: Handling query endpoint")
+        
+        // Parse request body
+        guard let bodyData = requestBody,
+              let requestJSON = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any],
+              let sql = requestJSON["sql"] as? String else {
+            let errorResponse: [String: Any] = [
+                "error": "Invalid request. Expected JSON with 'sql' field.",
+                "columns": [],
+                "rows": [],
+                "row_count": 0
+            ]
+            await sendJSONResponse(errorResponse, statusCode: 400, on: connection)
+            return
+        }
+        
+        // Execute query
+        let result = DatabaseManager.shared.executeQuery(sql)
+        
+        // Build response
+        let response: [String: Any] = [
+            "columns": result.columns,
+            "rows": result.rows,
+            "row_count": result.rows.count,
+            "error": result.error as Any
+        ]
+        
+        // Send response
+        await sendJSONResponse(response, statusCode: result.error == nil ? 200 : 400, on: connection)
+    }
+    
+    private func sendJSONResponse(_ object: [String: Any], statusCode: Int, on connection: NWConnection) async {
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted])
+            let jsonString = String(data: jsonData, encoding: .utf8) ?? "{}"
+            
+            let statusText = statusCode == 200 ? "OK" : "Bad Request"
+            let response = """
+            HTTP/1.1 \(statusCode) \(statusText)\r
+            Content-Type: application/json\r
+            Content-Length: \(jsonData.count)\r
+            Connection: close\r
+            Access-Control-Allow-Origin: *\r
+            Access-Control-Allow-Methods: POST, OPTIONS\r
+            Access-Control-Allow-Headers: Content-Type\r
+            \r
+            \(jsonString)
+            """
+            
+            if let responseData = response.data(using: .utf8) {
+                connection.send(content: responseData, completion: .contentProcessed { _ in
+                    connection.cancel()
+                })
+            }
+        } catch {
+            print("HTTPServer: Failed to serialize JSON response: \(error)")
+            let errorResponse = "HTTP/1.1 500 Internal Server Error\r\nContent-Type: text/plain\r\nContent-Length: 21\r\nConnection: close\r\n\r\nInternal Server Error"
+            if let data = errorResponse.data(using: .utf8) {
+                connection.send(content: data, completion: .contentProcessed { _ in
+                    connection.cancel()
+                })
+            }
         }
     }
 }

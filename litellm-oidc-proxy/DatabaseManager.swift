@@ -300,4 +300,73 @@ class DatabaseManager {
         formatter.countStyle = .file
         return formatter.string(fromByteCount: size)
     }
+    
+    // Execute arbitrary SQL query (read-only)
+    func executeQuery(_ sql: String) -> (columns: [String], rows: [[Any]], error: String?) {
+        // Security: Only allow SELECT statements
+        let trimmedSQL = sql.trimmingCharacters(in: .whitespacesAndNewlines)
+        let uppercasedSQL = trimmedSQL.uppercased()
+        
+        // Check if it's a SELECT statement
+        guard uppercasedSQL.hasPrefix("SELECT") else {
+            return ([], [], "Only SELECT statements are allowed")
+        }
+        
+        // Additional security checks
+        let dangerousKeywords = ["INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER", "TRUNCATE", "EXEC", "EXECUTE"]
+        for keyword in dangerousKeywords {
+            if uppercasedSQL.contains(keyword) {
+                return ([], [], "Query contains forbidden keyword: \(keyword)")
+            }
+        }
+        
+        do {
+            let statement = try db.prepare(sql)
+            var columns: [String] = []
+            var rows: [[Any]] = []
+            var columnsSet = false
+            
+            for row in statement {
+                if !columnsSet {
+                    // Get column names from the first row
+                    columns = statement.columnNames
+                    columnsSet = true
+                }
+                
+                // Convert row to array of values
+                var rowValues: [Any] = []
+                for i in 0..<row.count {
+                    if let value = row[i] {
+                        // Convert different types to appropriate representations
+                        switch value {
+                        case let data as Data:
+                            // Try to decode as JSON for headers
+                            if let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []) {
+                                rowValues.append(jsonObject)
+                            } else {
+                                rowValues.append(data.base64EncodedString())
+                            }
+                        case let double as Double:
+                            rowValues.append(double)
+                        case let int as Int64:
+                            rowValues.append(Int(int))
+                        case let string as String:
+                            rowValues.append(string)
+                        case let bool as Bool:
+                            rowValues.append(bool)
+                        default:
+                            rowValues.append(String(describing: value))
+                        }
+                    } else {
+                        rowValues.append(NSNull())
+                    }
+                }
+                rows.append(rowValues)
+            }
+            
+            return (columns, rows, nil)
+        } catch {
+            return ([], [], "Query execution failed: \(error.localizedDescription)")
+        }
+    }
 }

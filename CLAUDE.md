@@ -81,6 +81,9 @@ The proxy supports all LiteLLM endpoints, including:
 - `/v1/models` (model listing)
 - Both streaming and non-streaming requests
 
+Additionally, the proxy provides a management endpoint:
+- `/proxy/query` - SQL query interface for request logs (POST only)
+
 ### Key Features
 
 - **Token Caching**: Tokens are cached and refreshed 1 minute before expiry
@@ -88,6 +91,29 @@ The proxy supports all LiteLLM endpoints, including:
 - **Request Logging**: All requests/responses stored in SQLite with viewer UI
 - **Launch at Login**: macOS login item integration
 - **Streaming Support**: Proper handling of SSE streams
+- **SQL Query API**: Query request logs programmatically via HTTP
+
+### SQL Query Endpoint
+
+The proxy exposes a `/proxy/query` endpoint for querying request logs:
+
+```bash
+# Example: Get request counts by model
+curl -X POST http://localhost:9000/proxy/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sql": "SELECT model, COUNT(*) as count FROM request_logs GROUP BY model"
+  }'
+
+# Example: Get recent errors
+curl -X POST http://localhost:9000/proxy/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sql": "SELECT timestamp, path, response_status FROM request_logs WHERE response_status >= 400 ORDER BY timestamp DESC LIMIT 10"
+  }'
+```
+
+**Security**: Only SELECT queries are allowed. The endpoint blocks dangerous SQL keywords to prevent data modification.
 
 ## Dependencies
 
