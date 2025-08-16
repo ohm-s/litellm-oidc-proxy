@@ -295,6 +295,24 @@ struct RequestRowView: View {
     let log: RequestLog
     let isSelected: Bool
     
+    private func calculateTotalTokens(for log: RequestLog) -> Int? {
+        // For Anthropic-style responses, calculate total including cache tokens
+        if let promptTokens = log.promptTokens,
+           let completionTokens = log.completionTokens {
+            var total = promptTokens + completionTokens
+            
+            // Add cache creation tokens if present
+            if let cacheCreation = log.cacheCreationInputTokens {
+                total += cacheCreation
+            }
+            
+            return total
+        }
+        
+        // Fall back to totalTokens if available
+        return log.totalTokens
+    }
+    
     var body: some View {
         HStack(spacing: 12) {
             // Status indicator with method
@@ -330,11 +348,11 @@ struct RequestRowView: View {
             }
             
             // Token count badge if available
-            if let tokens = log.totalTokens {
+            if let totalTokens = calculateTotalTokens(for: log), totalTokens > 0 {
                 HStack(spacing: 2) {
                     Image(systemName: "number.square")
                         .font(.system(size: 10))
-                    Text("\(tokens)")
+                    Text("\(totalTokens)")
                         .font(.system(size: 11, weight: .medium))
                 }
                 .foregroundColor(.purple)
@@ -492,6 +510,71 @@ struct RequestDetailView: View {
                             Text(model)
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.primary)
+                        }
+                    }
+                }
+                
+                // Token usage summary if available
+                if log.totalTokens != nil || log.promptTokens != nil || log.completionTokens != nil {
+                    HStack(spacing: 20) {
+                        if let prompt = log.promptTokens {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.right.square")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.blue)
+                                Text("\(prompt)")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.blue)
+                                if let cacheRead = log.cacheReadInputTokens, cacheRead > 0 {
+                                    Text("(\(cacheRead) cached)")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.purple)
+                                }
+                            }
+                        }
+                        
+                        if let completion = log.completionTokens {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.left.square")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.green)
+                                Text("\(completion)")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.green)
+                            }
+                        }
+                        
+                        if let total = log.totalTokens {
+                            HStack(spacing: 4) {
+                                Image(systemName: "sum")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.primary)
+                                Text("\(total) total")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.primary)
+                            }
+                        }
+                        
+                        if let cacheCreation = log.cacheCreationInputTokens, cacheCreation > 0 {
+                            HStack(spacing: 4) {
+                                Image(systemName: "plus.square")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.orange)
+                                Text("\(cacheCreation) cached")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.orange)
+                            }
+                        }
+                        
+                        if let cost = log.litellmResponseCost ?? log.responseCost {
+                            HStack(spacing: 4) {
+                                Image(systemName: "dollarsign.square")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.primary)
+                                Text(String(format: "$%.6f", cost))
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.primary)
+                            }
                         }
                     }
                 }
