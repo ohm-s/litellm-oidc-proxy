@@ -306,6 +306,9 @@ struct RequestRowView: View {
                 total += cacheCreation
             }
             
+            // Note: Cache read tokens are already included in promptTokens,
+            // so we don't add them again to avoid double counting
+            
             return total
         }
         
@@ -526,7 +529,7 @@ struct RequestDetailView: View {
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(.blue)
                                 if let cacheRead = log.cacheReadInputTokens, cacheRead > 0 {
-                                    Text("(\(cacheRead) cached)")
+                                    Text("(\(cacheRead) from cache)")
                                         .font(.system(size: 11))
                                         .foregroundColor(.purple)
                                 }
@@ -560,7 +563,7 @@ struct RequestDetailView: View {
                                 Image(systemName: "plus.square")
                                     .font(.system(size: 11))
                                     .foregroundColor(.orange)
-                                Text("\(cacheCreation) cached")
+                                Text("\(cacheCreation) to cache")
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(.orange)
                             }
@@ -1061,10 +1064,10 @@ struct TokensTabView: View {
                     }
                 }
                 
-                // Cache Usage (Anthropic)
+                // Cache Token Usage (Anthropic)
                 if log.cacheCreationInputTokens != nil || log.cacheReadInputTokens != nil {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Cache Usage")
+                        Text("Cache Token Usage")
                             .font(.headline)
                         
                         HStack(spacing: 40) {
