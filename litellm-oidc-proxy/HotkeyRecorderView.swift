@@ -14,7 +14,7 @@ struct HotkeyRecorderView: NSViewRepresentable {
     
     func makeNSView(context: Context) -> HotkeyRecorderTextField {
         let textField = HotkeyRecorderTextField()
-        textField.delegate = context.coordinator
+        textField.hotkeyDelegate = context.coordinator
         textField.updateDisplay(modifiers: modifiers, keyCode: keyCode)
         return textField
     }
@@ -42,7 +42,7 @@ struct HotkeyRecorderView: NSViewRepresentable {
 }
 
 class HotkeyRecorderTextField: NSTextField {
-    weak var delegate: HotkeyRecorderView.Coordinator?
+    weak var hotkeyDelegate: HotkeyRecorderView.Coordinator?
     private var isRecording = false
     
     override init(frame frameRect: NSRect) {
@@ -95,7 +95,7 @@ class HotkeyRecorderTextField: NSTextField {
             let keyCode = UInt32(event.keyCode)
             
             // Update the binding
-            delegate?.updateHotkey(modifiers: modifierValue, keyCode: keyCode)
+            hotkeyDelegate?.updateHotkey(modifiers: modifierValue, keyCode: keyCode)
             
             // Stop recording
             isRecording = false

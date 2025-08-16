@@ -12,32 +12,46 @@ class HotKeyManager {
     static let shared = HotKeyManager()
     
     private var hotKeyRef: EventHotKeyRef?
-    private var eventHandler: EventHandlerRef?
-    private let hotKeyID = EventHotKeyID(signature: FourCharCode(fromString: "LLOP"), id: 1)
+    private var eventHandlerRef: EventHandlerRef?
+    private let hotKeyID = EventHotKeyID(signature: OSType("LLMP".fourCharCodeValue), id: 1)
     
-    private init() {}
+    private init() {
+        setupEventHandler()
+    }
+    
+    private func setupEventHandler() {
+        var eventSpec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+        
+        let handler: EventHandlerUPP = { (nextHandler, event, userData) -> OSStatus in
+            HotKeyManager.shared.handleHotKeyPress()
+            return noErr
+        }
+        
+        InstallEventHandler(GetApplicationEventTarget(), handler, 1, &eventSpec, nil, &eventHandlerRef)
+    }
     
     func registerHotKey() {
-        // Unregister any existing hotkey first
+        // Remove any existing hotkey
         unregisterHotKey()
         
         let settings = AppSettings.shared
         guard settings.globalHotkeyEnabled else { return }
         
-        // Install event handler
-        var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: OSType(kEventHotKeyPressed))
-        let eventHandlerUPP = NewEventHandlerUPP { (nextHandler, event, userData) -> OSStatus in
-            HotKeyManager.shared.handleHotKeyPress()
-            return noErr
+        // Register the hotkey
+        let status = RegisterEventHotKey(
+            settings.globalHotkeyKeyCode,
+            UInt32(settings.globalHotkeyModifiers),
+            hotKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &hotKeyRef
+        )
+        
+        if status == noErr {
+            print("Successfully registered hotkey with keyCode: \(settings.globalHotkeyKeyCode) and modifiers: \(settings.globalHotkeyModifiers)")
+        } else {
+            print("Failed to register hotkey. Error: \(status)")
         }
-        
-        InstallApplicationEventHandler(eventHandlerUPP, 1, &eventType, nil, &eventHandler)
-        
-        // Register hotkey
-        let modifiers = UInt32(settings.globalHotkeyModifiers)
-        let keyCode = settings.globalHotkeyKeyCode
-        
-        RegisterEventHotKey(keyCode, modifiers, hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef)
     }
     
     func unregisterHotKey() {
@@ -45,16 +59,21 @@ class HotKeyManager {
             UnregisterEventHotKey(hotKey)
             hotKeyRef = nil
         }
-        
-        if let handler = eventHandler {
-            RemoveEventHandler(handler)
-            eventHandler = nil
-        }
     }
     
     private func handleHotKeyPress() {
-        // Post notification to show menu
-        NotificationCenter.default.post(name: .showStatusMenu, object: nil)
+        // Remove debug alert - just show the menu
+        DispatchQueue.main.async {
+            // Post notification to show menu
+            NotificationCenter.default.post(name: .showStatusMenu, object: nil)
+        }
+    }
+    
+    deinit {
+        unregisterHotKey()
+        if let handler = eventHandlerRef {
+            RemoveEventHandler(handler)
+        }
     }
 }
 
@@ -62,14 +81,13 @@ extension Notification.Name {
     static let showStatusMenu = Notification.Name("showStatusMenu")
 }
 
-extension FourCharCode {
-    init(fromString string: String) {
-        precondition(string.count == 4)
-        
+// Helper extension to convert string to FourCharCode
+extension String {
+    var fourCharCodeValue: FourCharCode {
         var result: FourCharCode = 0
-        for char in string.utf8 {
-            result = (result << 8) + FourCharCode(char)
+        for char in self.prefix(4) {
+            result = (result << 8) + FourCharCode(char.asciiValue ?? 0)
         }
-        self = result
+        return result
     }
 }

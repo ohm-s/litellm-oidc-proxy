@@ -77,7 +77,8 @@ class AppSettings: ObservableObject {
         
         // Global hotkey settings - default to Cmd+Option+Control+H
         self.globalHotkeyEnabled = UserDefaults.standard.object(forKey: "globalHotkeyEnabled") as? Bool ?? true
-        self.globalHotkeyModifiers = UserDefaults.standard.object(forKey: "globalHotkeyModifiers") as? UInt ?? 1835008 // Cmd+Option+Control
+        // Carbon modifier flags: cmdKey = 0x0100, optionKey = 0x0800, controlKey = 0x1000
+        self.globalHotkeyModifiers = UserDefaults.standard.object(forKey: "globalHotkeyModifiers") as? UInt ?? 0x1900 // Cmd+Option+Control
         self.globalHotkeyKeyCode = UserDefaults.standard.object(forKey: "globalHotkeyKeyCode") as? UInt32 ?? 4 // H key
     }
 }

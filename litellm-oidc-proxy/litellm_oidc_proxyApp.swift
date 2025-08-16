@@ -43,7 +43,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
         // Listen for hotkey notification
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(showQuickStatsMenu),
+            selector: #selector(showMenu),
             name: .showStatusMenu,
             object: nil
         )
@@ -161,7 +161,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
         if settingsWindow == nil {
             let hostingView = NSHostingView(rootView: SettingsView())
             settingsWindow = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 500, height: 720),
+                contentRect: NSRect(x: 0, y: 0, width: 700, height: 600),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false
