@@ -306,6 +306,10 @@ struct RequestRowView: View {
                 total += cacheCreation
             }
             
+            if let cacheReadInputTokens = log.cacheReadInputTokens {
+                total += cacheReadInputTokens
+            }
+            
             // Note: Cache read tokens are already included in promptTokens,
             // so we don't add them again to avoid double counting
             
