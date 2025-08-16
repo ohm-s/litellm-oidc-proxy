@@ -44,6 +44,18 @@ class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(logTruncationLimit, forKey: "logTruncationLimit") }
     }
     
+    @Published var globalHotkeyEnabled: Bool {
+        didSet { UserDefaults.standard.set(globalHotkeyEnabled, forKey: "globalHotkeyEnabled") }
+    }
+    
+    @Published var globalHotkeyModifiers: UInt {
+        didSet { UserDefaults.standard.set(globalHotkeyModifiers, forKey: "globalHotkeyModifiers") }
+    }
+    
+    @Published var globalHotkeyKeyCode: UInt32 {
+        didSet { UserDefaults.standard.set(globalHotkeyKeyCode, forKey: "globalHotkeyKeyCode") }
+    }
+    
     static let shared = AppSettings()
     
     var isConfigurationValid: Bool {
@@ -62,6 +74,11 @@ class AppSettings: ObservableObject {
         self.autoStartProxy = UserDefaults.standard.bool(forKey: "autoStartProxy")
         self.truncateLogs = UserDefaults.standard.object(forKey: "truncateLogs") as? Bool ?? true
         self.logTruncationLimit = UserDefaults.standard.object(forKey: "logTruncationLimit") as? Int ?? 10000
+        
+        // Global hotkey settings - default to Cmd+Option+Control+H
+        self.globalHotkeyEnabled = UserDefaults.standard.object(forKey: "globalHotkeyEnabled") as? Bool ?? true
+        self.globalHotkeyModifiers = UserDefaults.standard.object(forKey: "globalHotkeyModifiers") as? UInt ?? 1835008 // Cmd+Option+Control
+        self.globalHotkeyKeyCode = UserDefaults.standard.object(forKey: "globalHotkeyKeyCode") as? UInt32 ?? 4 // H key
     }
 }
 

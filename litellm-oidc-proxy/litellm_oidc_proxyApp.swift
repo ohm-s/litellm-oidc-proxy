@@ -37,6 +37,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
         
         NotificationCenter.default.addObserver(self, selector: #selector(settingsChanged), name: .settingsChanged, object: nil)
         
+        // Register global hotkey
+        HotKeyManager.shared.registerHotKey()
+        
+        // Listen for hotkey notification
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(showQuickStatsMenu),
+            name: .showStatusMenu,
+            object: nil
+        )
+        
         // Check for auto-start
         let settings = AppSettings.shared
         if settings.autoStartProxy && settings.isConfigurationValid {

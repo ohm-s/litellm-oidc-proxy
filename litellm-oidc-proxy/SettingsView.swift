@@ -240,6 +240,43 @@ struct SettingsView: View {
                 .padding(.vertical, 8)
             }
             
+            GroupBox("Global Hotkey") {
+                VStack(spacing: 12) {
+                    HStack {
+                        Toggle("Enable global hotkey", isOn: $settings.globalHotkeyEnabled)
+                            .onChange(of: settings.globalHotkeyEnabled) { _ in
+                                HotKeyManager.shared.registerHotKey()
+                            }
+                        Spacer()
+                    }
+                    
+                    if settings.globalHotkeyEnabled {
+                        HStack {
+                            Text("Hotkey:")
+                                .frame(width: 120, alignment: .trailing)
+                            
+                            HotkeyRecorderView(
+                                modifiers: $settings.globalHotkeyModifiers,
+                                keyCode: $settings.globalHotkeyKeyCode
+                            )
+                            .onChange(of: settings.globalHotkeyModifiers) { _ in
+                                HotKeyManager.shared.registerHotKey()
+                            }
+                            .onChange(of: settings.globalHotkeyKeyCode) { _ in
+                                HotKeyManager.shared.registerHotKey()
+                            }
+                            
+                            Spacer()
+                        }
+                    }
+                    
+                    Text("Press this key combination to show the quick stats menu")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 8)
+            }
+            
             HStack {
                 Button("Cancel") {
                     dismiss()
