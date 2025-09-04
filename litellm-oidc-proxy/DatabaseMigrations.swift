@@ -68,7 +68,7 @@ struct DatabaseMigrations {
         // Define table columns using the same structure as DatabaseManager
         let logs = Table("request_logs")
         let id = Expression<UUID>("id")
-        let timestamp = Expression<Date>("timestamp")
+        let timestamp = Expression<Double>("timestamp")
         let method = Expression<String>("method")
         let path = Expression<String>("path")
         let requestHeaders = Expression<Data?>("request_headers")
