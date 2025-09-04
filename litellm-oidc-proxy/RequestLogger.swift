@@ -142,7 +142,7 @@ class RequestLogger: ObservableObject {
     private let queue = DispatchQueue(label: "com.litellm-oidc-proxy.requestlogger", attributes: .concurrent)
     
     // Pagination
-    private let pageSize = 100
+    private let pageSize = 20
     private var currentOffset = 0
     @Published var hasMoreLogs = true
     @Published var isLoadingMore = false

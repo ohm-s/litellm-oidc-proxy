@@ -15,6 +15,7 @@ struct LogViewerView: View {
     @State private var refreshTrigger = UUID()
     @State private var databaseSize = DatabaseManager.shared.getFormattedDatabaseSize()
     @State private var logCount = DatabaseManager.shared.getLogCount()
+    @State private var lastLoadedIndex = -1
     
     init() {
         print("LogViewerView: Initialized, current logs: \(RequestLogger.shared.logs.count)")
@@ -149,55 +150,61 @@ struct LogViewerView: View {
                 
                 Divider()
                 
-                // Request list with proper scrolling
-                ScrollView {
-                    VStack(spacing: 0) {
-                        if filteredLogs.isEmpty && !logger.isLoadingMore {
-                            VStack {
-                                Spacer()
-                                Text("No logs to display")
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                            }
-                            .frame(maxHeight: .infinity)
-                        } else {
-                            ForEach(filteredLogs, id: \.id) { log in
-                                RequestRowView(log: log, isSelected: selectedLog?.id == log.id)
-                                    .onTapGesture {
-                                        selectedLog = log
-                                    }
+                // Request list with infinite scroll
+                ScrollViewReader { scrollProxy in
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            if filteredLogs.isEmpty && !logger.isLoadingMore {
+                                VStack {
+                                    Spacer()
+                                    Text("No logs to display")
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                }
+                                .frame(maxHeight: .infinity)
+                            } else {
+                                ForEach(Array(filteredLogs.enumerated()), id: \.element.id) { index, log in
+                                    RequestRowView(log: log, isSelected: selectedLog?.id == log.id)
+                                        .onTapGesture {
+                                            selectedLog = log
+                                        }
+                                        .id(log.id)
+                                    
+                                    Divider()
+                                        .opacity(0.5)
+                                }
                                 
-                                Divider()
-                                    .opacity(0.5)
-                            }
-                            
-                            // Load more button
-                            if logger.hasMoreLogs && searchText.isEmpty && filterStatus == "all" {
-                                HStack {
-                                    if logger.isLoadingMore {
+                                // Trigger view that only appears when scrolled to bottom
+                                if logger.hasMoreLogs && searchText.isEmpty && filterStatus == "all" {
+                                    Color.clear
+                                        .frame(height: 1)
+                                        .onAppear {
+                                            if !logger.isLoadingMore {
+                                                print("LogViewerView: Reached bottom, triggering load more")
+                                                logger.loadMoreLogs()
+                                                // Update database info after loading more
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                                    databaseSize = DatabaseManager.shared.getFormattedDatabaseSize()
+                                                    logCount = DatabaseManager.shared.getLogCount()
+                                                }
+                                            }
+                                        }
+                                }
+                                
+                                // Loading indicator at the bottom
+                                if logger.isLoadingMore {
+                                    HStack {
                                         ProgressView()
                                             .scaleEffect(0.8)
                                             .padding(.trailing, 8)
-                                    }
-                                    
-                                    Button(action: {
-                                        logger.loadMoreLogs()
-                                        // Update database info after loading more
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                            databaseSize = DatabaseManager.shared.getFormattedDatabaseSize()
-                                            logCount = DatabaseManager.shared.getLogCount()
-                                        }
-                                    }) {
-                                        Text(logger.isLoadingMore ? "Loading..." : "Load More")
+                                        Text("Loading more...")
                                             .font(.system(size: 13))
-                                            .foregroundColor(.accentColor)
+                                            .foregroundColor(.secondary)
                                     }
-                                    .disabled(logger.isLoadingMore)
-                                    .buttonStyle(PlainButtonStyle())
+                                    .padding(.vertical, 12)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color(NSColor.controlBackgroundColor))
                                 }
-                                .padding(.vertical, 12)
-                                .frame(maxWidth: .infinity)
-                                .background(Color(NSColor.controlBackgroundColor))
                             }
                         }
                     }

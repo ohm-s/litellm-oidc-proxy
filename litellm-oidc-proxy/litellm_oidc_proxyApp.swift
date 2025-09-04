@@ -22,6 +22,7 @@ struct litellm_oidc_proxyApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDelegate, ObservableObject {
     var statusItem: NSStatusItem!
     var httpServer: HTTPServer!
+    var anthropicServer: AnthropicHTTPServer!
     var settingsWindow: NSWindow?
     var logViewerWindow: NSWindow?
     
@@ -29,6 +30,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         httpServer = HTTPServer()
+        anthropicServer = AnthropicHTTPServer()
         updateStatusIcon()
         
         if let button = statusItem.button {
@@ -56,6 +58,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
                 await validateAndAutoStart()
             }
         }
+        
+        // Always auto-start the Anthropic proxy
+        anthropicServer.start()
+        print("Anthropic proxy auto-started on port \(anthropicServer.currentPort)")
     }
     
     func updateStatusIcon() {
@@ -66,13 +72,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
                 button.image?.isTemplate = false
                 
                 // Add a visual indicator when server is not running
-                if !httpServer.isRunning {
+                if !httpServer.isRunning && !anthropicServer.isRunning {
                     button.alphaValue = 0.5
                 } else {
                     button.alphaValue = 1.0
                 }
             }
-            button.toolTip = httpServer.isRunning ? "LiteLLM OIDC Proxy - Running" : "LiteLLM OIDC Proxy - Stopped"
+            
+            var tooltip = "LiteLLM OIDC Proxy"
+            if httpServer.isRunning && anthropicServer.isRunning {
+                tooltip += " - Both proxies running"
+            } else if httpServer.isRunning {
+                tooltip += " - LiteLLM proxy running"
+            } else if anthropicServer.isRunning {
+                tooltip += " - Anthropic proxy running"
+            } else {
+                tooltip += " - Stopped"
+            }
+            button.toolTip = tooltip
         }
     }
     
@@ -84,13 +101,25 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
     @objc func showMenu() {
         let menu = NSMenu()
         
-        let statusTitle = httpServer.isRunning ? "Proxy running on localhost:\(httpServer.currentPort)" : "Proxy stopped"
-        menu.addItem(NSMenuItem(title: statusTitle, action: nil, keyEquivalent: ""))
+        // LiteLLM Proxy Status
+        let litellmTitle = httpServer.isRunning ? "LiteLLM Proxy: localhost:\(httpServer.currentPort)" : "LiteLLM Proxy: stopped"
+        menu.addItem(NSMenuItem(title: litellmTitle, action: nil, keyEquivalent: ""))
+        
+        // Anthropic Proxy Status
+        let anthropicTitle = anthropicServer.isRunning ? "Anthropic Proxy: localhost:\(anthropicServer.currentPort)" : "Anthropic Proxy: stopped"
+        menu.addItem(NSMenuItem(title: anthropicTitle, action: nil, keyEquivalent: ""))
+        
         menu.addItem(NSMenuItem.separator())
         
-        let toggleTitle = httpServer.isRunning ? "Stop Proxy" : "Start Proxy"
-        let toggleItem = NSMenuItem(title: toggleTitle, action: #selector(toggleServer), keyEquivalent: "")
-        menu.addItem(toggleItem)
+        // LiteLLM Toggle
+        let litellmToggleTitle = httpServer.isRunning ? "Stop LiteLLM Proxy" : "Start LiteLLM Proxy"
+        let litellmToggleItem = NSMenuItem(title: litellmToggleTitle, action: #selector(toggleServer), keyEquivalent: "")
+        menu.addItem(litellmToggleItem)
+        
+        // Anthropic Toggle
+        let anthropicToggleTitle = anthropicServer.isRunning ? "Stop Anthropic Proxy" : "Start Anthropic Proxy"
+        let anthropicToggleItem = NSMenuItem(title: anthropicToggleTitle, action: #selector(toggleAnthropicServer), keyEquivalent: "")
+        menu.addItem(anthropicToggleItem)
         
         menu.addItem(NSMenuItem(title: "View Logs...", action: #selector(openLogViewer), keyEquivalent: "l"))
         menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
@@ -98,7 +127,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         
         // Quick Stats section - below Quit
-        if httpServer.isRunning {
+        if httpServer.isRunning || anthropicServer.isRunning {
             menu.addItem(NSMenuItem.separator())
             
             // Stats header
@@ -152,6 +181,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
             httpServer.stop()
         } else {
             httpServer.start()
+        }
+        updateStatusIcon()
+    }
+    
+    @objc func toggleAnthropicServer() {
+        if anthropicServer.isRunning {
+            anthropicServer.stop()
+        } else {
+            anthropicServer.start()
         }
         updateStatusIcon()
     }
@@ -220,11 +258,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
         
         switch result {
         case .success(_):
-            // Both validations passed, start the server
+            // Both validations passed, start the LiteLLM proxy
             DispatchQueue.main.async { [weak self] in
                 self?.httpServer.start()
                 self?.updateStatusIcon()
-                print("Proxy server auto-started successfully")
+                print("LiteLLM proxy auto-started successfully")
             }
         case .failure(let error):
             print("Auto-start failed: \(error.localizedDescription)")
