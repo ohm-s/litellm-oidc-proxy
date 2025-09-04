@@ -40,8 +40,9 @@ struct DatabaseMigrations {
     private static func runMigration(version: Int, db: Connection) throws {
         switch version {
         case 1:
-            // Initial schema - already exists, just marking it
-            print("DatabaseMigrations: Version 1 - Initial schema")
+            // Initial schema - create the base table
+            print("DatabaseMigrations: Version 1 - Creating initial schema")
+            try createInitialSchema(db: db)
             
         case 2:
             // Add truncation columns
@@ -61,6 +62,43 @@ struct DatabaseMigrations {
         default:
             throw DatabaseError.unknownMigration(version)
         }
+    }
+    
+    private static func createInitialSchema(db: Connection) throws {
+        // Define table columns using the same structure as DatabaseManager
+        let logs = Table("request_logs")
+        let id = Expression<UUID>("id")
+        let timestamp = Expression<Date>("timestamp")
+        let method = Expression<String>("method")
+        let path = Expression<String>("path")
+        let requestHeaders = Expression<Data?>("request_headers")
+        let requestBody = Expression<String?>("request_body")
+        let responseStatus = Expression<Int>("response_status")
+        let responseHeaders = Expression<Data?>("response_headers")
+        let responseBody = Expression<String?>("response_body")
+        let duration = Expression<Double>("duration")
+        let tokenUsed = Expression<String?>("token_used")
+        let error = Expression<String?>("error")
+        
+        // Create the initial table
+        try db.run(logs.create(ifNotExists: true) { t in
+            t.column(id, primaryKey: true)
+            t.column(timestamp)
+            t.column(method)
+            t.column(path)
+            t.column(requestHeaders)
+            t.column(requestBody)
+            t.column(responseStatus)
+            t.column(responseHeaders)
+            t.column(responseBody)
+            t.column(duration)
+            t.column(tokenUsed)
+            t.column(error)
+        })
+        
+        // Create initial indices
+        try db.run(logs.createIndex(timestamp, ifNotExists: true))
+        try db.run(logs.createIndex(method, path, ifNotExists: true))
     }
     
     private static func addTruncationColumns(db: Connection) throws {
